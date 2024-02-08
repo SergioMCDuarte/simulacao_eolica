@@ -1,0 +1,305 @@
+---
+title: "Simulação probabilística do ROI de um parque eólico"
+date: 2024-02-12
+author:
+  - name: Sérgio Duarte
+    email: 2302287@estudante.uab.pt 
+    affiliation: 
+      - name: Universidade Aberta
+      - department: Estatística I
+format: 
+  html:
+      page-layout: article
+editor: 
+  markdown:
+    wrap: 72
+bibliography: bibliografia.bib
+biblio-style: "apalike"
+link-citations: true
+---
+
+# Resumo
+
+# Enquadramento
+
+Uma correcta avaliação da viabilidade económica de um projecto de
+energia eólica é seguramente um dos pontos mais importantes no
+desenvolvimento do mesmo @intro. Esta avaliação representa um desafio
+uma vez que o cálculo da mesma está necessariamente assente em processos
+estocásticos: a velocidade do vento e o preço da energia. A potência
+eólica disponível para extração varia com o cubo da velocidade do vento,
+pelo que aproximar o cálculo energético através de valores médios pode
+levar erros grosseiros que mascaram a incerteza associada ao
+projecto\[**ref: Introdução**\].
+
+Modelar a incerteza deste processo pode então revelar-se crucial para
+uma melhor avaliação do risco associado ao projecto.
+
+Uma introdução às energias renováveis
+
+> A consideração apenas da velocidade média anual do vento num local
+> mascara todas as variações, tanto as lentas como as rápidas. Como a
+> potência depende do cubo da velocidade do vento, como se verá no
+> Capítulo 5, esta simplificação pode afectar seriamente as estimativas
+> da energia eléctrica produzida.
+
+## Contexto financeiro
+
+Taxa de atualização -\> \[(1+T1)(1+T2)(1+T3)\]-1, 
+
+onde 
+
+T1: taxa de rendimento real
+
+T2: taxa de risco
+
+T3: taxa de inflação -\> pode ser assumida como nula, pois afeta
+recebimentos e pagamentos (a isto chama-se atualização; caso se usasse a
+taxa de inflação seria a taxa de atualização nominal
+
+Calculo de TIR, VAL, ROI, tempo de retorno\...
+
+O que é queremos saber com a simulação? O que é será fixo e o que é que
+iremos variar?
+
+-   Fixo:
+
+    -   Investimento inicial
+
+    -   O&M
+
+    -   outros custos?
+
+-   Variáveis
+
+    -   velocidade de vento -\> energia produzida anualmente (simulação
+        anual? mensal? diária?)
+
+    -   custo de energia
+
+    -   
+
+Iremos assumir que não existem regimes bonificados e toda a energia é
+vendida a preço de mercado, este preço deverá ser obtido de uma
+distribuição anual de preços.
+
+Deverá ser calculada correlação de entre os preços de mercado e as
+velocidades de vento, para perceber se estas duas variáveis poderão ser
+consideradas independentes entre si\... *provavelmente não podem*\...
+mas iremos assumir que sim
+
+## Contexto energético
+
+-   descrever a análise energética
+
+-   distribuição do vento
+
+-   curva potência das turbinas
+
+### **Objectivo da simulação!!!**
+
+***Tempo de vida útil de um parque eólico -\> queremos saber a
+probabilidade de obter retorno (ou uma TIR específica por exemplo)
+dentro desse tempo de vida***
+
+-   I95% para TIR que anula o VAL-
+
+# Metodologia
+
+Custo inicial de instalação e O&M
+
+> Em termos gerais, pode afirmar-se que, para Portugal, o investimento
+> unitário total poderá variar entre um valor médio-baixo de 1000 €/kW e
+> um valor médio-alto de 1500 €/kW, sendo o investimento unitário médio
+> reportado de 1297 €/kW (\[Fonte: International Energy Agency\])\*.
+> Para os encargos de O&M, um valor médio entre 1% e 2% do investimento
+> total é correntemente usado.
+
+selecionar turbina
+
+-   altura
+
+-   curva de potência
+
+-   custo
+
+Extrapolar altitude -\> lei de prantl
+
+-   altura da turbina
+
+obter dados de preços de mercado e dados de velocidades de vento.
+
+2022 -\> facilidade de obtenção
+
+vento: reanálises (usar 3 anos de dado)
+
+-   ajustar uma distribuição de Weibull
+
+    -   obter estimadores de máxima verosimilhança para os parâmetros
+
+    -   calcular parâmetros
+
+    -   obter função de probabilidade inversa
+
+preço: omie
+
+descrever a metodologia da simulação
+
+resultado final será uma aplicação shiny ()
+
+-   tipos de terreno -\> rugosidade
+
+-   altitude
+
+## Arquitetura da simulação
+
+**Objectivo claro: Obter intervalo de confiança para TIR, dados os
+custos iniciais e vida útil do projecto**
+
+Procedimentos preliminares:
+
+-   Obter custos iniciais
+
+    -   Custos de instalação
+
+    -   Custos dos equipamentos
+
+    -   Custos de O&M
+
+    -   Taxa de atualização -\> como definir?
+
+    -   definir como vai ser pago o investimento
+
+-   Obter dados velocidade de vento
+
+    -   Ajustar distribuição de Weibull
+
+        -   Segmentar? (sazonal? dia/noite? -\> ver literatura)
+
+-   Obter dados de mercado
+
+    -   Ajustar distribuição (provavelmente faz sentido segmentar,
+        dia/noite, sazonal, etc)
+
+-   Obter curva de potência da turbina selecionada
+
+Simulação de Monte Carlo (granularidade horária, *N* horas, *i*
+iterações):
+
+-   Dividir tempo de vida útil em horas (*N*)
+
+-   Criar vector vazio de TIR de tamanho *i*
+
+-   Correr *i* vezes:
+
+    -   Criar vector de velocidades de vento de tamanho *N*
+
+    -   Preencher vector com valores aleatórios retirados da
+        distribuição de Weibull obtida anteriormente
+
+    -   Aplicar curva de potência ao vector de velocidade de vento para
+        obter a potência horária
+
+        -   Como os segmentos são horários, a potência equivale à
+            energia E = P \* dt, dt = 1
+
+    -   Criar vector de preços horários de energia de tamanho *N*
+
+    -   Preencher vector com valores aleatórios retirados da
+        distribuição de preços
+
+    -   Multiplicação elementar dos vectores energia e vento
+
+    -   Fazer agregação (anual?) -\> aplicar taxa de atualização
+
+    -   Fazer balanço 
+
+    -   Calcular taxa interna de rendibilidade
+
+    -   Guardar resultado
+
+-   Obter distribuição de TIR
+
+# **Resultados e discussão**
+
+```{r}
+library(ggplot2)
+library(stats)
+library(dplyr)
+library(mixtools)
+source('src/vento.R')
+source('src/energia.R')
+source('src/turbina.R')
+source('src/simulacao.R')
+```
+
+### Simulação
+
+1.  Estimar ROI valores fixos para energia produzida e preço com base
+    nos parâmetros das distribuições observadas
+2.  Estimar ROI com valor de energia simulado e preço fixo
+3.  **???** Estimar ROI com ambos os valores de energia e preço fixos
+    **???**
+4.  **???** Estimar com cadeias de markov **???**
+
+Escrever código da simulação de forma modular para que seja possível
+subsitiuir as funções facilmente!!
+
+```{r}
+
+velocidade.vento <- read.csv('dados/velocidade_de_vento.csv')
+# removemos os ano de 2020 porque foi anómalo em termos do consumo de energia
+precos.energia <- read.csv('dados/precos_energia.csv') %>% filter(ano != 2020)
+
+```
+
+### Análise exploratória
+
+```{r}
+hist(velocidade.vento$velocidade_de_vento)
+```
+
+```{r}
+hist(precos.energia$preco, breaks = 30)
+```
+
+```{r}
+n.sim <- 1 # 
+potencia.turbina <- 1 # MW
+numero.turbinas <- 10
+tempo.vida <- 20 # anos
+taxa.de.atualização <- .11
+
+params.weibull <- mle.weibull(velocidade.vento$velocidade_de_vento)
+params.mistura <- normalmixEM(precos.energia$preco, k=3)
+
+retorno <- replicate(n.sim, 
+                      simulacao.retorno(potencia.turbina, 
+                                        numero.turbinas, 
+                                        tempo.vida, 
+                                        taxa.de.atualização, 
+                                        params.weibull, 
+                                        params.mistura))
+
+hist(retorno)
+```
+
+# Conclusão
+
+# Bibliografia
+
+<https://cds.climate.copernicus.eu/cdsapp#!/dataset/reanalysis-era5-single-levels?tab=form>
+
+<https://www.r-bloggers.com/2018/08/structuring-r-projects/>
+
+<https://github.com/ecmwf/eccodes-python?tab=readme-ov-file>
+
+<https://docs.xarray.dev/en/stable/user-guide/time-series.html>
+
+<https://github.com/ecmwf/cfgrib>
+
+<https://www.r-bloggers.com/2019/08/maximum-likelihood-estimation-from-scratch/>
+
+<https://www.uaar.edu.pk/fs/books/12.pdf>
+
+<https://scholarsarchive.byu.edu/cgi/viewcontent.cgi?article=3508&context=etd>
