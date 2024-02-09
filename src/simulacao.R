@@ -1,4 +1,9 @@
 
+val <- function(retorno.anual, om.anual, invetimento.anual, taxa.atualizacao) {
+  
+}
+
+
 simulacao.retorno <- function(potencia.turbina, 
                               numero.turbinas, 
                               tempo.vida, 

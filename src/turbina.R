@@ -1,8 +1,8 @@
 
 curva.potencia <- function(velocidade.vento,
-                           cut.in.speed = 3.0,
+                           cut.in.speed = 3,
                            cut.off.speed = 25.0,
-                           pr.speed = 14.0,
+                           pr.speed = 15,
                            pr = 1.0 ) {
   #https://ewtdirectwind.com/products/dw61/
   
@@ -12,8 +12,8 @@ curva.potencia <- function(velocidade.vento,
   p.out <- ifelse(p.out > cut.off.speed, 0, p.out)
   p.out <- ifelse(p.out > pr.speed, pr, p.out)
   
-  p.out <- ifelse((p.out > cut.in.speed) & (p.out < pr.speed), 
-                  pr * (p.out^2 - cut.in.speed^2) / (pr.speed^2 - cut.in.speed^2), 
+  p.out <- ifelse((p.out >= cut.in.speed) & (p.out < pr.speed), 
+                  pr / (1 + exp(-(p.out-9.0134)/.9)), 
                   p.out)
   
   return(p.out)

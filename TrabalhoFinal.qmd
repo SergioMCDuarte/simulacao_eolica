@@ -8,7 +8,7 @@ author:
       - name: Universidade Aberta
       - department: Estatística I
 format: 
-  html:
+  pdf:
       page-layout: article
 editor: 
   markdown:
@@ -17,6 +17,20 @@ bibliography: bibliografia.bib
 biblio-style: "apalike"
 link-citations: true
 ---
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+library(ggplot2)
+library(stats)
+library(dplyr)
+library(mixtools)
+library(latex2exp)
+library(hrbrthemes)
+source('src/vento.R')
+source('src/energia.R')
+source('src/turbina.R')
+source('src/simulacao.R')
+```
+
 
 # Resumo
 
@@ -35,66 +49,109 @@ projecto\[**ref: Introdução**\].
 Modelar a incerteza deste processo pode então revelar-se crucial para
 uma melhor avaliação do risco associado ao projecto.
 
-Uma introdução às energias renováveis
-
-> A consideração apenas da velocidade média anual do vento num local
-> mascara todas as variações, tanto as lentas como as rápidas. Como a
-> potência depende do cubo da velocidade do vento, como se verá no
-> Capítulo 5, esta simplificação pode afectar seriamente as estimativas
-> da energia eléctrica produzida.
-
 ## Contexto financeiro
 
-Taxa de atualização -\> \[(1+T1)(1+T2)(1+T3)\]-1, 
+Um projecto de produção de energia deverá ser avaliado financeiramente
+como qualquer investimento. Desta forma, torna-se importante
+contabilizar todos os encargos e recebimentos associados ao projecto, de
+modo a calcular o mapa de fluxo de caixa (*cashflow*).
 
-onde 
+Importa clarificar algumas definições antes de avançar para a
+metodologia de cálculo.
 
-T1: taxa de rendimento real
+Taxa de atualização: $a = [(1+T1)(1+T2)(1+T3)]-1$,
 
-T2: taxa de risco
+onde:
 
-T3: taxa de inflação -\> pode ser assumida como nula, pois afeta
-recebimentos e pagamentos (a isto chama-se atualização; caso se usasse a
-taxa de inflação seria a taxa de atualização nominal
+$T1:$ taxa de rendimento real
 
-Calculo de TIR, VAL, ROI, tempo de retorno\...
+$T2:$ taxa de risco
 
-O que é queremos saber com a simulação? O que é será fixo e o que é que
-iremos variar?
+$T3:$ taxa de inflação
 
--   Fixo:
+No caso presente a taxa de inflação será assumida como nula, pois afeta
+recebimentos e pagamentos (chamada de avaliação a preços constantes).
 
-    -   Investimento inicial
+Os indicadores comuns de avaliação de investimentos são:
 
-    -   O&M
+- Valor Atual Líquido (VAL);
+- Taxa Interna de Rendibilidade (TIR);
 
-    -   outros custos?
+O VAL é dado por:
 
--   Variáveis
+$$
+VAL = \sum_{j=i}^n\frac{R_{Lj}}{(1+a)^j} - \sum_{j=0}^{n-1} \frac{I_j}{(1+a)^j}
+$$
 
-    -   velocidade de vento -\> energia produzida anualmente (simulação
-        anual? mensal? diária?)
+onde n é o tempo de vida útil do investimento em anos, $R_{Lj}$ é o retorno anual 
+líquido, dado por $R_j-Operaçao\&Manutenção$ e $I_j$ representa a anuidade do investimento no ano j. 
+Este valor representa o retorno esperado no final do tempo de vida útil do investimento. 
+A TIR representa a taxa de atualização que anula o VAL, ou seja, a taxa de rendibilidade mínima necessária para cobrir o investimento efetuado.
+Este valor pode ser obtido através da optimização da seguinte expressão:
+$$
+\sum_{j=i}^n\frac{R_{Lj}}{(1+TIR)^j} - \sum_{j=0}^{n-1} \frac{I_j}{(1+TIR)^j} = 0
+$$
 
-    -   custo de energia
+Para calcular estes indicadores é necessário obter dados de:
 
-    -   
+  - Investimento inicial
+  - O&M
+  - Retorno 
 
-Iremos assumir que não existem regimes bonificados e toda a energia é
-vendida a preço de mercado, este preço deverá ser obtido de uma
+No presente estudo será assumido que não existem regimes bonificados e toda a energia é
+vendida a preço de mercado, pelo que este preço deverá ser obtido de uma
 distribuição anual de preços.
 
-Deverá ser calculada correlação de entre os preços de mercado e as
-velocidades de vento, para perceber se estas duas variáveis poderão ser
-consideradas independentes entre si\... *provavelmente não podem*\...
-mas iremos assumir que sim
 
 ## Contexto energético
 
--   descrever a análise energética
+O retorno de um investimento eólico está directamente relacionado com o recurso 
+disponível na área de instalação do projeto. Tipicamente, a velocidade do vento segue uma distribuição de Weibull, tal que $X \sim Weibull(\beta, \theta)$, onde $\beta$ é o factor de forma e $\theta$ o factor de escala da distribuição. Esta distribuição tem a seguinte função densidade de probabilidade:
+$$
+f(x|{\beta, \theta}) = \frac{\beta}{\theta^\beta}x^{\beta-1}e^{-(\frac{x}{\theta})^\beta}
+$$
+```{r echo=FALSE}
+beta <- 2
+theta <- 7
 
--   distribuição do vento
+v <- seq(0,26, length.out=100)
+p <- dweibull(v, beta, theta)
+data.frame(v,p) %>% 
+  ggplot(aes(x=v, y=p)) + 
+  geom_line() + 
+  labs(
+    x = "velocidade de vento [m/s]", 
+    y = "f(x)", 
+    title = TeX("Densidade de probabilidade de $Weibull(\\beta, \\theta)$"),
+  ) + theme_minimal()
+
+
+```
+
+Com base nesta distribuição podemos simular as velocidade de vento esperadas durante o tempo de vida do projecto e assim estimar a energia produzida. 
+Através da curva de potência característica de uma turbina eólica é possível converter a velocidade de vento numa potência.
+
+
+```{r echo=FALSE}
+source('src/turbina.R')
+
+pt <- curva.potencia(v)
+data.frame(v, pt) %>% 
+  ggplot(aes(x=v, y=pt)) + 
+  geom_line() + 
+  labs(
+    x = "velocidade de vento [m/s]", 
+    y = TeX("$\\frac{P}{P_{nominal}}$"), 
+    title = TeX("Exemplo da curva de potência de uma turbina eólica"),
+  ) + theme_minimal()
+
+```
+
 
 -   curva potência das turbinas
+
+    -   custo de energia
+
 
 ### **Objectivo da simulação!!!**
 
@@ -222,16 +279,6 @@ iterações):
 
 # **Resultados e discussão**
 
-```{r}
-library(ggplot2)
-library(stats)
-library(dplyr)
-library(mixtools)
-source('src/vento.R')
-source('src/energia.R')
-source('src/turbina.R')
-source('src/simulacao.R')
-```
 
 ### Simulação
 
