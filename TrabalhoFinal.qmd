@@ -1,5 +1,5 @@
 ---
-title: "Simulação probabilística do ROI de um parque eólico"
+title: "Simulação probabilística da TIR de um parque eólico"
 date: 2024-02-12
 author:
   - name: Sérgio Duarte
@@ -8,7 +8,7 @@ author:
       - name: Universidade Aberta
       - department: Estatística I
 format: 
-  pdf:
+  html:
       page-layout: article
 editor: 
   markdown:
@@ -283,23 +283,20 @@ numericamente recorrendo à função **`optim`** do R.
 
 O estimador é dado por:
 
-$$
-f(x|{\beta, \theta}) = \frac{\beta}{\theta^\beta}x^{\beta-1}e^{-(\frac{x}{\theta})^\beta} 
-$$
+```{=tex}
+\begin{aligned}
 
-$$
+f(x|{\beta, \theta}) &= \frac{\beta}{\theta^\beta}x^{\beta-1}e^{-(\frac{x}{\theta})^\beta} \Rightarrow \\
 L(\beta, \theta | X) 
-= f(x_1|\beta, \theta)f(x_2|\beta, \theta)...f(x_n|\beta, \theta) 
-= \prod^n_{i=0} \frac{\beta}{\theta}\left(\frac{x_i}{\theta}\right)^{(\beta-1)} e^{-\left(\frac{x_i}{\theta}\right)^\beta} 
-= \left(\frac{\beta}{\theta}\right)^n \prod^n_{i=0}x_i^{(\beta-1)}e^{-\left(\frac{x_i}{\theta}\right)^\beta}
-$$
+&= f(x_1|\beta, \theta)f(x_2|\beta, \theta)...f(x_n|\beta, \theta) \\
+&= \prod^n_{i=0} \frac{\beta}{\theta}\left(\frac{x_i}{\theta}\right)^{(\beta-1)} e^{-\left(\frac{x_i}{\theta}\right)^\beta} \\
+&= \left(\frac{\beta}{\theta}\right)^n \prod^n_{i=0}x_i^{(\beta-1)}e^{-\left(\frac{x_i}{\theta}\right)^\beta}\\
+M(\beta, \theta|X) &= \log{\left(L(\beta, theta|X)\right)} ~\\
+&= \log{\left(\left(\frac{\beta}{\theta}\right)^n\prod^n_{i=0}x_i^{(\beta-1)}e^{-\left(\frac{x_i}{\theta}\right)^\beta}\right)} \\
+&= n\left[\log{\beta}-\log{\theta}\right] + \sum^n_{i=0} \left( (\beta-1)\log{x_i} - \left(\frac{x_i}{\theta}\right)^\beta\right)
 
-$$
-M(\beta, \theta|X) = \log{\left(L(\beta, theta|X)\right)} 
-= \log{\left(\left(\frac{\beta}{\theta}\right)^n \prod^n_{i=0}x_i^{(\beta-1)}e^{-\left(\frac{x_i}{\theta}\right)^\beta}\right)} \\
-= n\left[\log{\beta}-\log{\theta}\right] + \sum^n_{i=0} \left( (\beta-1)\log{x_i} - \left(\frac{x_i}{\theta}\right)^\beta\right)
-$$
-
+\end{aligned}
+```
 De onde obtemos a seguinte distribuição:
 
 ```{r echo=FALSE, warning=FALSE}
@@ -327,8 +324,8 @@ velocidade.vento %>%
 ```
 
 Visualmente verificamos um bom ajuste aos dados. O teste de
-*Kolmogorov-Smirnoff* corrobora isto, não havendo evidência para
-rejeitar a hipótese nula de que as duas distribuições são diferentes.
+*Kolmogorov-Smirnov* corrobora isto, não havendo evidência para rejeitar
+a hipótese nula de que as duas distribuições são diferentes.
 
 ```{r echo=FALSE, warning=FALSE}
 ks.test(rvs.vento, 
@@ -351,9 +348,13 @@ o preço; e períodos em que tende para a principal moda da distribuição,
 que faz com o preço se aproxime da média, gerando assim 3 processos de
 geração de preços.
 
-```{r echo=FALSE, warning=FALSE}
+```{r echo=FALSE, warning=FALSE, message=FALSE, results='hide', collapse=TRUE, error=FALSE}
 set.seed(1)
 params.preco <- normalmixEM(x=precos.energia$preco, k=3, maxit = 5000)
+```
+
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+
 rvs.preco <- preco.sim(length(precos.energia$preco), 
                        params.preco)
 
@@ -379,20 +380,54 @@ precos.energia %>%
   labs(
     x = "preço da energia [€/MWh]", 
     y = "densidade de probabilidade", 
-    title = "Distribuição dos preços da energia elétrica no mercado Ibérico no ano de 2022"
+    title = "Distribuição dos preços da energia no mercado Ibérico no ano de 2022"
   ) + theme_minimal()
 ```
+
+Apesar de a função de densidade de probabilidade gerada não ser
+perfeira, verificamos que é muito próxima e pelo teste de *KS*
+verificamos que não existe evidência suficiente para rejeitar a hipótese
+nula de igualdade de distribuições.
 
 ```{r echo=FALSE, warning=FALSE}
 
 ks.test(precos.energia$preco, rvs.preco)
 ```
 
-descrever ajuste da mistrura gaussiana
-
 ### Cálculo da TIR
 
-descrever cálculo
+Para calcular a TIR é necessário proceder ao cálculo do *cashflow* ao
+longo do tempo de vida do projecto. Como foi apresentado anteriormente,
+a TIR pode ser encontrada optimizando a seguinte função:
+
+$$
+\sum^n_{j=0}\frac{R_{Lj}}{(1+TIR)^j}-\sum^{n-1}_{j=0}\frac{I_j}{(1+TIR)^j} = 0
+$$
+
+```{r}
+val <- function(a, r, i) {
+  j <- 1:length(r)
+  return(sum(Rj/(1+a)^j) - sum(Ij/(1+a)^(j-1)))
+}
+
+val.funcao.custo <- function(a,r,i) {
+  
+  return(sqrt(val(a,r,i)**2))
+}
+
+tempo.vida <- 20
+It <- 10000000 # investimento total
+Ij <- replicate(tempo.vida, It/tempo.vida)
+Comj <- replicate(tempo.vida, It*0.01)
+Rj <- replicate(tempo.vida, 650000) - Comj
+
+j <- 1:tempo.vida
+a <- 0.2
+
+val.funcao.custo(a,Rj,Ij)
+
+optim(0.01, val.funcao.custo,Rj,Ij, method = "Brent", lower = -1, upper = 1)
+```
 
 Custo inicial de instalação e O&M
 
@@ -411,39 +446,9 @@ selecionar turbina
 
 -   custo
 
-Extrapolar altitude -\> lei de prantl
-
--   altura da turbina
-
-obter dados de preços de mercado e dados de velocidades de vento.
-
-2022 -\> facilidade de obtenção
-
-vento: reanálises (usar 3 anos de dado)
-
--   ajustar uma distribuição de Weibull
-
-    -   obter estimadores de máxima verosimilhança para os parâmetros
-
-    -   calcular parâmetros
-
-    -   obter função de probabilidade inversa
-
-preço: omie
-
-descrever a metodologia da simulação
-
-resultado final será uma aplicação shiny ()
-
--   tipos de terreno -\> rugosidade
-
--   altitude
-
 # **Resultados e discussão**
 
 ### Simulação
-
-### Análise exploratória
 
 ```{r}
 n.sim <- 100 # 
