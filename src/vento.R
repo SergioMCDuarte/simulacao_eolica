@@ -12,9 +12,9 @@ weibull.log.likelihood <- function(params, dados){
 }
 
 
-mle.weibull <- function(dados) {
+mle.weibull <- function(dados, beta=1, theta=1) {
   
-  params <- optim(par=c(beta=1, theta = 1), 
+  params <- optim(par=c(beta=beta, theta=theta), 
                   fn=weibull.log.likelihood, 
                   dados=dados)
   

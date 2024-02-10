@@ -27,12 +27,16 @@ simulacao.retorno <- function(potencia.turbina,
   # velocidade do vento
   # potencia -> simulação horária (e = p*t -> t=1)
   
-  energia <- replicate(tempo.vida, 
-                       curva.potencia(rweibull(8760, shape = params.weibull$par[1], scale = params.weibull$par[2]), 
-                                      pr=potencia.turbina)*numero.turbinas)
   
-  preco.energia <- replicate(tempo.vida, preco.sim(8760, params.mistura))
+  energia <- matrix(curva.potencia(rweibull(n=8760*tempo.vida, 
+                                            shape=params.weibull$par[1], 
+                                            scale=params.weibull$par[2]), 
+                          pr=potencia.turbina)*numero.turbinas,
+                    ncol = tempo.vida)
   
+
+  preco.energia <- matrix(preco.sim(8760*tempo.vida, params.mistura), 
+                          ncol = tempo.vida)
   
   # rentabilidade
   rendimento.bruto <- colSums(energia*preco.energia)

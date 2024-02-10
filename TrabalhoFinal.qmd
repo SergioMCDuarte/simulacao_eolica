@@ -31,6 +31,12 @@ source('src/turbina.R')
 source('src/simulacao.R')
 ```
 
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+velocidade.vento <- read.csv('dados/velocidade_de_vento.csv')
+# removemos os ano de 2020 porque foi anómalo em termos do consumo de energia
+precos.energia <- read.csv('dados/precos_energia.csv') %>% filter(ano == 2022)
+```
 
 # Resumo
 
@@ -74,8 +80,8 @@ recebimentos e pagamentos (chamada de avaliação a preços constantes).
 
 Os indicadores comuns de avaliação de investimentos são:
 
-- Valor Atual Líquido (VAL);
-- Taxa Interna de Rendibilidade (TIR);
+-   Valor Atual Líquido (VAL);
+-   Taxa Interna de Rendibilidade (TIR);
 
 O VAL é dado por:
 
@@ -83,10 +89,12 @@ $$
 VAL = \sum_{j=i}^n\frac{R_{Lj}}{(1+a)^j} - \sum_{j=0}^{n-1} \frac{I_j}{(1+a)^j}
 $$
 
-onde n é o tempo de vida útil do investimento em anos, $R_{Lj}$ é o retorno anual 
-líquido, dado por $R_j-Operaçao\&Manutenção$ e $I_j$ representa a anuidade do investimento no ano j. 
-Este valor representa o retorno esperado no final do tempo de vida útil do investimento. 
-A TIR representa a taxa de atualização que anula o VAL, ou seja, a taxa de rendibilidade mínima necessária para cobrir o investimento efetuado.
+onde n é o tempo de vida útil do investimento em anos, $R_{Lj}$ é o
+retorno anual líquido, dado por $R_j-Operaçao\&Manutenção$ e $I_j$
+representa a anuidade do investimento no ano j. Este valor representa o
+retorno esperado no final do tempo de vida útil do investimento. A TIR
+representa a taxa de atualização que anula o VAL, ou seja, a taxa de
+rendibilidade mínima necessária para cobrir o investimento efetuado.
 Este valor pode ser obtido através da optimização da seguinte expressão:
 $$
 \sum_{j=i}^n\frac{R_{Lj}}{(1+TIR)^j} - \sum_{j=0}^{n-1} \frac{I_j}{(1+TIR)^j} = 0
@@ -94,22 +102,25 @@ $$
 
 Para calcular estes indicadores é necessário obter dados de:
 
-  - Investimento inicial
-  - O&M
-  - Retorno 
+-   Investimento inicial
+-   O&M
+-   Retorno
 
-No presente estudo será assumido que não existem regimes bonificados e toda a energia é
-vendida a preço de mercado, pelo que este preço deverá ser obtido de uma
-distribuição anual de preços.
-
+No presente estudo será assumido que não existem regimes bonificados e
+toda a energia é vendida a preço de mercado, pelo que este preço deverá
+ser obtido de uma distribuição anual de preços.
 
 ## Contexto energético
 
-O retorno de um investimento eólico está directamente relacionado com o recurso 
-disponível na área de instalação do projeto. Tipicamente, a velocidade do vento segue uma distribuição de Weibull, tal que $X \sim Weibull(\beta, \theta)$, onde $\beta$ é o factor de forma e $\theta$ o factor de escala da distribuição. Esta distribuição tem a seguinte função densidade de probabilidade:
-$$
+O retorno de um investimento eólico está directamente relacionado com o
+recurso disponível na área de instalação do projeto. Tipicamente, a
+velocidade do vento segue uma distribuição de Weibull, tal que
+$X \sim Weibull(\beta, \theta)$, onde $\beta$ é o factor de forma e
+$\theta$ o factor de escala da distribuição. Esta distribuição tem a
+seguinte função densidade de probabilidade: $$
 f(x|{\beta, \theta}) = \frac{\beta}{\theta^\beta}x^{\beta-1}e^{-(\frac{x}{\theta})^\beta}
 $$
+
 ```{r echo=FALSE}
 beta <- 2
 theta <- 7
@@ -128,9 +139,10 @@ data.frame(v,p) %>%
 
 ```
 
-Com base nesta distribuição podemos simular as velocidade de vento esperadas durante o tempo de vida do projecto e assim estimar a energia produzida. 
-Através da curva de potência característica de uma turbina eólica é possível converter a velocidade de vento numa potência.
-
+Com base nesta distribuição podemos simular as velocidade de vento
+esperadas durante o tempo de vida do projecto e assim estimar a energia
+produzida. Através da curva de potência característica de uma turbina
+eólica é possível converter a velocidade de vento numa potência.
 
 ```{r echo=FALSE}
 source('src/turbina.R')
@@ -147,21 +159,240 @@ data.frame(v, pt) %>%
 
 ```
 
+Uma vez obtidos valores para a potência elétrica produzida pela turbina,
+a energia anual produzida pode ser calculada por:
 
--   curva potência das turbinas
-
-    -   custo de energia
-
-
-### **Objectivo da simulação!!!**
-
-***Tempo de vida útil de um parque eólico -\> queremos saber a
-probabilidade de obter retorno (ou uma TIR específica por exemplo)
-dentro desse tempo de vida***
-
--   I95% para TIR que anula o VAL-
+$$
+E_a = \int^{u_{max}}_{u_0}f(u) P(u)du
+$$ Os elementos expostos permitem então proceder a uma simulção
+probabilística da TIR, obtendo um intervalo de confiança para a mesma,
+de forma a modela a incerteza inerente ao projecto.
 
 # Metodologia
+
+## Arquitetura da simulação
+
+**Objectivo: Obter intervalo de confiança para TIR, dados os custos
+iniciais e vida útil do projecto**
+
+Procedimentos preliminares:
+
+-   Obter custos iniciais
+
+    -   Custos de instalação
+
+    -   Custos dos equipamentos
+
+    -   Custos de O&M
+
+    -   Taxa de atualização -\> como definir?
+
+    -   definir como vai ser pago o investimento
+
+-   Obter dados velocidade de vento
+
+    -   Ajustar distribuição de Weibull
+
+-   Obter dados de mercado
+
+    -   Ajustar distribuição de Weibull
+
+-   Obter curva de potência da turbina selecionada
+
+Simulação de Monte Carlo (granularidade horária, *N* horas, *i*
+iterações):
+
+-   Correr *i* vezes:
+
+    -   Simular velocidades de vento
+
+    -   Aplicar curva de potência ao vector de velocidade de vento para
+        obter a potência horária
+
+        -   Como os segmentos são horários, a potência equivale à
+            energia E = P \* dt, dt = 1
+
+    -   Simular preço de energia
+
+    -   Multiplicação elementar dos vectores energia e vento
+
+    -   Fazer agregação anual
+
+    -   Fazer balanço
+
+    -   Calcular taxa interna de rendibilidade
+
+    -   Guardar resultado
+
+-   Obter distribuição de TIR
+
+## Recolha de Dados
+
+Antes iniciar a recolha de dados foi escolhido um local fictício para a
+implantação do parque eólico a estudar, de modo a obter os dados de
+velocidades de vento correspondentes.
+
+**\[INSERIR IMAGEM DA GRELHA\]**
+
+### Velocidade de vento
+
+Os dados de velocidades de vento são provenientes do produto ERA 5
+referente a reanálises atmosférias, fornecido pelo ECMWF @era5. Estes
+dados consistem numa série temporal das componentes Norte e Oeste das
+velocidades de vento, numa grelha horizontal, a uma altitude de 100m, em
+formato GRIB.
+
+**\[INSERIR IMAGEM DE EXEMPLO\]**
+
+De modo a utilizaros dados, as componentes do vento foram combinadas
+para obter a norma da velocidade do vento:
+
+$$
+\overline V = |U,V| = \sqrt{U^2 + V^2}
+$$
+
+Foi feita a média espacial da grelha, para cada instante da série, e os
+dados foram convertidos para formato CSV, para facilitar a sua
+utilização.
+
+### Preço de energia
+
+Os dados de preços de energia foram obtidos através do *website* da OMIE
+(operador do mercado Ibérico de energia), referentes ao ano de
+2022\[**REF**\]. Os preços são apresentados numa série temporal, em
+formato CSV, em €/MWh.
+
+### Curva de potência
+
+LIVRO
+
+### Custos de investimento
+
+LIVRO
+
+## Preparação dos dados para a simulação
+
+### Distribuição de vento
+
+Os parâmetros da função densidade de probabilidade da velocidade de
+vento foram estimados a partir dos dados recolhidos, utilizando o
+estimador de máxima verosimilhança. O estimador foi minimzado
+numericamente recorrendo à função **`optim`** do R.
+
+#### Estimador de máxima verosimilhança
+
+O estimador é dado por:
+
+$$
+f(x|{\beta, \theta}) = \frac{\beta}{\theta^\beta}x^{\beta-1}e^{-(\frac{x}{\theta})^\beta} 
+$$
+
+$$
+L(\beta, \theta | X) 
+= f(x_1|\beta, \theta)f(x_2|\beta, \theta)...f(x_n|\beta, \theta) 
+= \prod^n_{i=0} \frac{\beta}{\theta}\left(\frac{x_i}{\theta}\right)^{(\beta-1)} e^{-\left(\frac{x_i}{\theta}\right)^\beta} 
+= \left(\frac{\beta}{\theta}\right)^n \prod^n_{i=0}x_i^{(\beta-1)}e^{-\left(\frac{x_i}{\theta}\right)^\beta}
+$$
+
+$$
+M(\beta, \theta|X) = \log{\left(L(\beta, theta|X)\right)} 
+= \log{\left(\left(\frac{\beta}{\theta}\right)^n \prod^n_{i=0}x_i^{(\beta-1)}e^{-\left(\frac{x_i}{\theta}\right)^\beta}\right)} \\
+= n\left[\log{\beta}-\log{\theta}\right] + \sum^n_{i=0} \left( (\beta-1)\log{x_i} - \left(\frac{x_i}{\theta}\right)^\beta\right)
+$$
+
+De onde obtemos a seguinte distribuição:
+
+```{r echo=FALSE, warning=FALSE}
+set.seed(1)
+params.vento <- mle.weibull(velocidade.vento$velocidade_de_vento)
+
+rvs.vento <- rweibull(length(velocidade.vento$velocidade_de_vento), 
+              shape=params.vento$par[1], 
+              scale=params.vento$par[2])
+
+densidade.vento <- dweibull(x=velocidade.vento$velocidade_de_vento, 
+                            shape=params.vento$par[1], 
+                            scale=params.vento$par[2])
+
+# sobrepor densidade estimada com dados   
+velocidade.vento %>% 
+  ggplot(aes(x=velocidade_de_vento)) + 
+  geom_histogram(aes=(colour = "Dados"), alpha=.3, stat='density') +
+  geom_line(aes(x=velocidade_de_vento, y=densidade.vento, colour = 'colocar legenda'))+
+  labs(
+    x = "velocidade de vento [m/s]", 
+    y = "densidade de probabilidade", 
+    title = "Distribuição da velocidade vento, a 100m, no local em estudo"
+  ) + theme_minimal()
+```
+
+Visualmente verificamos um bom ajuste aos dados. O teste de
+*Kolmogorov-Smirnoff* corrobora isto, não havendo evidência para
+rejeitar a hipótese nula de que as duas distribuições são diferentes.
+
+```{r echo=FALSE, warning=FALSE}
+ks.test(rvs.vento, 
+        velocidade.vento$velocidade_de_vento)
+```
+
+### Distribuição de preços
+
+Os dados de preços da energia eléctrica utilizados foram referentes ao
+ano de 2022. Estes não seguem uma distribuição comum, pelo que a mesmo
+foi aproximada com uma mistura de 3 distruições normais, através da
+bilbioteca **`mixtools`** do R.
+
+A escolha do número 3 para o número de distribuições na mistura deveu-se
+sobretudo aos resultados empíricos dos vários testes realizados. No
+entanto este valor não é descabido pois podemos racionalizá-lo da
+seguinte forma: existem períodos em que a produção de energia é elevada,
+o que faz baixar o preço; períodos em que é reduzida, o que faz aumentar
+o preço; e períodos em que tende para a principal moda da distribuição,
+que faz com o preço se aproxime da média, gerando assim 3 processos de
+geração de preços.
+
+```{r echo=FALSE, warning=FALSE}
+set.seed(1)
+params.preco <- normalmixEM(x=precos.energia$preco, k=3, maxit = 5000)
+rvs.preco <- preco.sim(length(precos.energia$preco), 
+                       params.preco)
+
+dnormmixt <- function(t, lam, mu, sig){
+  m <- length(lam)
+  f <- 0
+  for (j in 1:m) {
+    f <- f + lam[j]*dnorm(t,mean=mu[j],sd=sig[j])
+  }
+  f
+}
+
+precos.energia %>%
+  ggplot() + 
+  geom_histogram(aes(x=preco), stat='density', bins = 30) + 
+  geom_line(
+    aes(
+      x=preco,
+      y=dnormmixt(preco, params.preco$lambda, params.preco$mu, params.preco$sigma),
+      colour = 'colocar legenda'
+      )
+    ) + 
+  labs(
+    x = "preço da energia [€/MWh]", 
+    y = "densidade de probabilidade", 
+    title = "Distribuição dos preços da energia elétrica no mercado Ibérico no ano de 2022"
+  ) + theme_minimal()
+```
+
+```{r echo=FALSE, warning=FALSE}
+
+ks.test(precos.energia$preco, rvs.preco)
+```
+
+descrever ajuste da mistrura gaussiana
+
+### Cálculo da TIR
+
+descrever cálculo
 
 Custo inicial de instalação e O&M
 
@@ -208,125 +439,26 @@ resultado final será uma aplicação shiny ()
 
 -   altitude
 
-## Arquitetura da simulação
-
-**Objectivo claro: Obter intervalo de confiança para TIR, dados os
-custos iniciais e vida útil do projecto**
-
-Procedimentos preliminares:
-
--   Obter custos iniciais
-
-    -   Custos de instalação
-
-    -   Custos dos equipamentos
-
-    -   Custos de O&M
-
-    -   Taxa de atualização -\> como definir?
-
-    -   definir como vai ser pago o investimento
-
--   Obter dados velocidade de vento
-
-    -   Ajustar distribuição de Weibull
-
-        -   Segmentar? (sazonal? dia/noite? -\> ver literatura)
-
--   Obter dados de mercado
-
-    -   Ajustar distribuição (provavelmente faz sentido segmentar,
-        dia/noite, sazonal, etc)
-
--   Obter curva de potência da turbina selecionada
-
-Simulação de Monte Carlo (granularidade horária, *N* horas, *i*
-iterações):
-
--   Dividir tempo de vida útil em horas (*N*)
-
--   Criar vector vazio de TIR de tamanho *i*
-
--   Correr *i* vezes:
-
-    -   Criar vector de velocidades de vento de tamanho *N*
-
-    -   Preencher vector com valores aleatórios retirados da
-        distribuição de Weibull obtida anteriormente
-
-    -   Aplicar curva de potência ao vector de velocidade de vento para
-        obter a potência horária
-
-        -   Como os segmentos são horários, a potência equivale à
-            energia E = P \* dt, dt = 1
-
-    -   Criar vector de preços horários de energia de tamanho *N*
-
-    -   Preencher vector com valores aleatórios retirados da
-        distribuição de preços
-
-    -   Multiplicação elementar dos vectores energia e vento
-
-    -   Fazer agregação (anual?) -\> aplicar taxa de atualização
-
-    -   Fazer balanço 
-
-    -   Calcular taxa interna de rendibilidade
-
-    -   Guardar resultado
-
--   Obter distribuição de TIR
-
 # **Resultados e discussão**
 
-
 ### Simulação
-
-1.  Estimar ROI valores fixos para energia produzida e preço com base
-    nos parâmetros das distribuições observadas
-2.  Estimar ROI com valor de energia simulado e preço fixo
-3.  **???** Estimar ROI com ambos os valores de energia e preço fixos
-    **???**
-4.  **???** Estimar com cadeias de markov **???**
-
-Escrever código da simulação de forma modular para que seja possível
-subsitiuir as funções facilmente!!
-
-```{r}
-
-velocidade.vento <- read.csv('dados/velocidade_de_vento.csv')
-# removemos os ano de 2020 porque foi anómalo em termos do consumo de energia
-precos.energia <- read.csv('dados/precos_energia.csv') %>% filter(ano != 2020)
-
-```
 
 ### Análise exploratória
 
 ```{r}
-hist(velocidade.vento$velocidade_de_vento)
-```
-
-```{r}
-hist(precos.energia$preco, breaks = 30)
-```
-
-```{r}
-n.sim <- 1 # 
+n.sim <- 100 # 
 potencia.turbina <- 1 # MW
 numero.turbinas <- 10
 tempo.vida <- 20 # anos
-taxa.de.atualização <- .11
-
-params.weibull <- mle.weibull(velocidade.vento$velocidade_de_vento)
-params.mistura <- normalmixEM(precos.energia$preco, k=3)
+taxa.de.atualização <- .05
 
 retorno <- replicate(n.sim, 
                       simulacao.retorno(potencia.turbina, 
                                         numero.turbinas, 
                                         tempo.vida, 
                                         taxa.de.atualização, 
-                                        params.weibull, 
-                                        params.mistura))
+                                        params.vento, 
+                                        params.preco))
 
 hist(retorno)
 ```
