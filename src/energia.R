@@ -6,10 +6,10 @@ preco.medio <- function(dados) {
 
 preco.sim <- function(n, params) {
   
-  rvs.preco <- sqrt(rmvnormmix(n, 
+  rvs.preco <- abs(rmvnormmix(n, 
                                lambda = params$lambda,
                                mu=params$mu, 
-                               sigma = params$sigma)**2)
+                               sigma = params$sigma))
   
   return(rvs.preco)
 }

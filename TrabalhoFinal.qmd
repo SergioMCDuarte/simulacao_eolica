@@ -1,5 +1,5 @@
 ---
-title: "Simulação probabilística da TIR de um parque eólico"
+title: "Simulação probabilística da TIR de um investimento num parque eólico"
 date: 2024-02-12
 author:
   - name: Sérgio Duarte
@@ -8,8 +8,11 @@ author:
       - name: Universidade Aberta
       - department: Estatística I
 format: 
+  pdf:
+      page-layout: article
   html:
       page-layout: article
+  
 editor: 
   markdown:
     wrap: 72
@@ -17,14 +20,18 @@ bibliography: bibliografia.bib
 csl: ieee.csl
 link-citations: true
 lang: pt
+header-includes:
+  - \usepackage{amsmath}
 ---
 
-
+```{=html}
 <style>
 body {
 text-align: justify}
 </style>
----
+```
+
+------------------------------------------------------------------------
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 library(ggplot2)
@@ -36,15 +43,11 @@ library(hrbrthemes)
 source('src/vento.R')
 source('src/energia.R')
 source('src/turbina.R')
-source('src/simulacao.R')
 source('src/financas.R')
 ```
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 
-velocidade.vento <- read.csv('dados/velocidade_de_vento.csv')
-# removemos os ano de 2020 porque foi anómalo em termos do consumo de energia
-precos.energia <- read.csv('dados/precos_energia.csv') %>% filter(ano == 2022)
 
 turbina <- read.csv2('dados/enercon_E70_2000.csv', sep = ',', dec='.')
 colnames(turbina) <- c('v','p')
@@ -52,6 +55,8 @@ colnames(turbina) <- c('v','p')
 ```
 
 # Resumo
+
+Este tabalho propõe um método probilístico de avaliação de um investimento de um parque eólico, recorrendo a uma simulação de Monte Carlo. Para proceder a simulação foram recolhidos dados de velocidades de vento e de preços de energia, e subsquentemente modeladas as suas distribuições. Como resultado foi obtida uma distribuição da Taxa Interna de Rendibilidade (TIR) do investimento, deste modo incorporando no resultado a variabilidade inerente às variáveis do cálculo.
 
 # Enquadramento
 
@@ -295,15 +300,14 @@ custo inicial para custos recorrentes anuais (O&M) @intro2.
 Os parâmetros da função densidade de probabilidade da velocidade de
 vento foram estimados a partir dos dados recolhidos, utilizando o
 estimador de máxima verosimilhança. O estimador foi minimzado
-numericamente recorrendo à função **`optim`** do R.
+numericamente recorrendo à função **`optim`** do R @mler.
 
 #### Estimador de máxima verosimilhança
 
 O estimador é dado por:
 
-```{=tex}
-\begin{aligned}
 
+\begin{align*}
 f(x|{\beta, \theta}) &= \frac{\beta}{\theta^\beta}x^{\beta-1}e^{-(\frac{x}{\theta})^\beta} \Rightarrow \\
 L(\beta, \theta | X) 
 &= f(x_1|\beta, \theta)f(x_2|\beta, \theta)...f(x_n|\beta, \theta) \\
@@ -312,9 +316,9 @@ L(\beta, \theta | X)
 M(\beta, \theta|X) &= \log{\left(L(\beta, theta|X)\right)} ~\\
 &= \log{\left(\left(\frac{\beta}{\theta}\right)^n\prod^n_{i=0}x_i^{(\beta-1)}e^{-\left(\frac{x_i}{\theta}\right)^\beta}\right)} \\
 &= n\left[\log{\beta}-\log{\theta}\right] + \sum^n_{i=0} \left( (\beta-1)\log{x_i} - \left(\frac{x_i}{\theta}\right)^\beta\right)
+\end{align*}
 
-\end{aligned}
-```
+
 ### Distribuição de preços
 
 Os dados de preços da energia eléctrica utilizados foram referentes ao
@@ -348,13 +352,40 @@ $$
 \sum^n_{j=0}\frac{R_{Lj}}{(1+TIR)^j} - I_t = 0
 $$
 
-# **Resultados e discussão**
+# Resultados e discussão
 
 ## Preparação dos dados
 
 ### Custos de instalação e O&M
 
+O parque a ser estudado será composto por 5 aerogeradores Enercon
+E70/2000 de 2MW de potêncial nominal cada, totalizando 10MW de potência
+instalada. Utilizando os custos unitários referidos em @intro2, obtemos
+os seguintes custos iniciais e de operação e manutenção:
+
+
+\begin{align*}
+Custos\ iniciais: I_t &= 1297[\frac{\texteuro}{kW}]\times10[MW]\times1000[\frac{kW}{MW}] \\
+&= 12.97\times10^6\texteuro \\
+Custos\ O\&M\ anuais: C_{OMj} &= 2\% \times I_t = 259400\texteuro
+\end{align*}
+
 ### Curva de Potência
+
+Utilizando os dados da curva de potência da turbina Enercon E70/2000,
+ajusta-se um modelo logístico da forma:
+
+$$
+f(u) = \frac{L}{1+e^{-k(u-u_0)}}
+$$ Onde: $L:$ supremo dos dados observados $k:$ taxa de crescimento
+$u_0:$ centro da curva
+
+O modelo foi ajustado pela minimização numérica de uma função objectivo
+da forma:
+
+$$
+g(L,k,u_0) = (y-\frac{L}{1+e^{-k(u-u_0)}})^2
+$$
 
 ```{r echo=FALSE, warning=FALSE, message=FALSE, fig.align='center'}
 curva.potencia <- function(x, L=1, k=1, x0=0) {
@@ -374,21 +405,38 @@ curva.potencia.params <- optim(c(3000, 0.5, 8),
 
 turbina %>% 
   ggplot(aes(x=v, y=p)) + 
-  geom_point() + 
+  geom_point(aes(colour="Dados")) + 
   geom_line(aes(x=v, y=curva.potencia(v, 
                                       2050,
                                       curva.potencia.params$par[2], 
-                                      curva.potencia.params$par[3]))) + 
+                                      curva.potencia.params$par[3]), colour="Função logística")) + 
   labs(
     x = "velocidade de vento [m/s]", 
     y = "potência [kW]", 
     title = TeX("Curva de potência do aerogerador Enercon E70/2000"),
-  ) + theme_minimal()
+  ) + theme_minimal() + 
+  scale_colour_discrete(name="",
+                            breaks=c("Dados", "Função logística"),
+                            labels=c("Dados", "Função logística"))
 ```
+Através do ajuste obteve-se os parâmetros:
+
+L = `r curva.potencia.params$par[1]`
+
+k = `r curva.potencia.params$par[2]`
+
+$u_0$ = `r curva.potencia.params$par[3]`
+
+Na curva apresentada acima, o parâmetro L foi forçado a 2050, pois este é o máximo empírico da curva.
 
 ### Distribuição das velocidade de vento
 
+Através do estimador de máxima verosimilhança obtive-se a seguinte curva:
+
+
 ```{r echo=FALSE, warning=FALSE}
+velocidade.vento <- read.csv('dados/velocidade_de_vento.csv')
+
 set.seed(1)
 params.vento <- mle.weibull(velocidade.vento$velocidade_de_vento)
 
@@ -403,14 +451,23 @@ densidade.vento <- dweibull(x=velocidade.vento$velocidade_de_vento,
 # sobrepor densidade estimada com dados   
 velocidade.vento %>% 
   ggplot(aes(x=velocidade_de_vento)) + 
-  geom_histogram(aes=(colour = "Dados"), alpha=.3, stat='density') +
-  geom_line(aes(x=velocidade_de_vento, y=densidade.vento, colour = 'colocar legenda'))+
+  geom_histogram(aes=(colour = "Dados observados"), alpha=.3, stat='density') +
+  geom_line(aes(x=velocidade_de_vento, y=densidade.vento, colour = 'Distribuição ajustada'))+
   labs(
     x = "velocidade de vento [m/s]", 
     y = "densidade de probabilidade", 
     title = "Distribuição da velocidade vento, a 100m, no local em estudo"
-  ) + theme_minimal()
+  ) + theme_minimal()+ 
+  scale_colour_discrete(name="",
+                            breaks=c("Dados observados", "Distribuição ajustada"),
+                            labels=c("Dados observados", "Distribuição ajustada"))
+
 ```
+A curva apresentada é parametrizada por:
+
+$\beta$ = `r params.vento$par[1]`
+
+$\theta$ = `r params.vento$par[2]`
 
 Visualmente verificamos um bom ajuste aos dados. O teste de
 *Kolmogorov-Smirnov* corrobora isto, não havendo evidência para rejeitar
@@ -422,11 +479,28 @@ ks.test(rvs.vento,
 ```
 
 ### Distribuição do preço da energia
+```{r, echo=FALSE, warning=FALSE}
+precos.energia <- read.csv('dados/precos_energia.csv')
+
+data.frame(precos.energia %>% 
+  group_by(ano) %>% 
+  summarise(
+    media.preco = mean(preco),
+    var.preco = var(preco)
+  ))
+
+```
+Verifica-se que existe uma grande variância para anos de 2021 e 2022. A média destes anos também é bastante superior aos anos anteriores. É de notar também a média inferior do ano de 2020, provavelmente devida à pandemia. Estes dados sugerem que seria benéfico obter um maior número de dados, de modo a melhorar a representatividade dos mesmos e a evitar que fenómenos locais possam distorcer a distribuição.
+
+A mistura gaussiana encontrada que melhor se ajusta aos dados de preço da energia resulta na seguinte curva:
+
+
 
 ```{r echo=FALSE, warning=FALSE, message=FALSE, results='hide', collapse=TRUE, error=FALSE}
-set.seed(1)
-params.preco <- normalmixEM(x=precos.energia$preco, k=3, maxit = 5000)
+set.seed(3)
+params.preco <- normalmixEM(x=precos.energia$preco, k=3, mu=c(50,112,190), maxit = 5000)
 ```
+
 
 ```{r echo=FALSE, warning=FALSE, message=FALSE, fig.align='center'}
 
@@ -449,21 +523,22 @@ precos.energia %>%
     aes(
       x=preco,
       y=dnormmixt(preco, params.preco$lambda, params.preco$mu, params.preco$sigma),
-      colour = 'colocar legenda'
+      colour = "Distribuição ajustada"
       )
     ) + 
   labs(
     x = "preço da energia [€/MWh]", 
     y = "densidade de probabilidade", 
-    title = "Distribuição dos preços da energia no mercado Ibérico no ano de 2022"
-  ) + theme_minimal()
+    title = "Distribuição dos preços da energia no mercado Ibérico entre 2018-2022"
+  ) + theme_minimal() + 
+  scale_colour_discrete(name="",
+                            breaks=c("Dados observados", "Distribuição ajustada"),
+                            labels=c("Dados observados", "Distribuição ajustada"))
 
 ```
 
-Apesar de a função de densidade de probabilidade gerada não ser
-perfeira, verificamos que é muito próxima e pelo teste de *KS*
-verificamos que não existe evidência suficiente para rejeitar a hipótese
-nula de igualdade de distribuições.
+Apesar de a função de densidade de probabilidade gerada não ser perfeira, verificamos que é muito próxima. No entanto, pelo teste de *KS* verificamos que existe evidência suficiente para rejeitar a hipótese nula de igualdade de distribuições até uma significância de 0.01%. Apesar disto, será usada esta distribuição para obter valores de preços, deixando a ressalva que poderá ser benéfico obter mais dados ou mudar o modelo de distribuição utilizado.
+
 
 ```{r echo=FALSE, warning=FALSE}
 
@@ -471,10 +546,15 @@ ks.test(precos.energia$preco, rvs.preco)
 ```
 
 ### Simulação
+```{r echo=FALSE, warning=FALSE, message=FALSE, fig.align='center'}
+n.sim <- 100
+```
+
+Utilizando os parâmetros apresentados nesta secção, procedeu-se a uma simulação de Monte Carlo, n=`r n.sim`. Desta simulação obteve-se a seguinte distribuição de valores para a TIR.
+
 
 ```{r echo=FALSE, warning=FALSE, message=FALSE, fig.align='center'}
-
-n.sim <- 300
+set.seed(1)
 potencia.turbina <- 2 # MW
 numero.turbinas <- 5
 tempo.vida <- 20
@@ -509,37 +589,29 @@ ci95 <- confint(lm(tir.vec ~ 1))
 
 data.frame(tir.vec) %>% 
   ggplot(aes(x=tir.vec)) +
-  geom_histogram(bins = 10) +
-  geom_vline(aes(xintercept=ci95[1], colour="CI 95%"), colour='red') +
-  geom_vline(aes(xintercept=ci95[2]), colour='red') +
+  geom_histogram(bins = 10, stat = "density") +
+  geom_vline(aes(xintercept=ci95[1], colour="CI 95%")) +
+  geom_vline(aes(xintercept=ci95[2], colour="CI 95%")) +
   labs(
     x = "TIR", 
     y = "Frequência", 
     title =paste("Distribuição da TIR obtida na simulação de Monte Carlo com n =", n.sim)
-  ) + theme_minimal()
+  ) + theme_minimal() + 
+  scale_colour_discrete(name="",
+                            breaks=c("TIR", "CI 95%"),
+                            labels=c("TIR", "CI 95%"))
 
 ```
-
-```{r}
-ci95
-```
+Esta distribuição tem um valor médio de `r mean(tir.vec)`. A apresentação da TIR na forma de uma distribuição permite ganhar alguma sensibilidade para valores prováveis, de forma a compará-la de forma mais informada com valores de retorno de outros investimentos. 
+Para o projecto hipotético apresentado verifica-se uma TIR relativamente baixa para os 20 anos de investimento considerados, pelo que os potenciais investidores poderiam reconsiderar avançar com o mesmo. 
+Os vários factores de variabilidade introduzidos na simulação dão mais confiança na interpretação dos resultados do introduzir meramente os valores médio da velocidade de vento e de preço de mercado. No entanto é preciso considerar também que as distribuições utilizadas podem ser melhoradas, principalmente no caso do preço da energia, visto que o ajuste não foi o melhor. Aumentar a escala temporal dos dados recolhidos pode ser uma forma de melhorar este cálculo.
 
 # Conclusão
+Os fatores que afetam o retorno de um investimento podem ser aproximados, dando aos investidores uma estimativa pontual. No entanto, para investimentos cujos fatores subjacentes são dominados por processos aleatórios, estas estimativas pontuais falham em capturar a variabilidade inerente. 
+Neste trabalho foi proposta uma forma probabilística de avaliar um investimento num parque eólico. Este método teve por base uma simulação de Monte Carlo, que visou modelar a variabilidade introduzida pelo recurso eólico e pelo mercado de energia elétrica, resultando numa distribuição do valor da TIR esperada para um investimento hipotético.
+O resultado permite aos decisores terem uma visão probabilística do valor esperado, em contraponto com uma estimativa pontual, que em casos de comparação de investimentos pode gerar conclusões diferentes.
+No trabalho apresentado recorreu-se a algumas simplificações, como a metodologia de financiamento do projecto, a obtenção dos dados e o horizontes temporais dos dados utilizados. Este último foi bastante evidente nos dados dos preços da energia, onde se verificou uma grande alteração na distribuição anual. Seria interessante utilizar um conjunto de dados que correspondesse ao tempo de vida do projecto, aqui assumido como 20 anos.
+
+
 
 # Bibliografia
-
-<https://cds.climate.copernicus.eu/cdsapp#!/dataset/reanalysis-era5-single-levels?tab=form>
-
-<https://www.r-bloggers.com/2018/08/structuring-r-projects/>
-
-<https://github.com/ecmwf/eccodes-python?tab=readme-ov-file>
-
-<https://docs.xarray.dev/en/stable/user-guide/time-series.html>
-
-<https://github.com/ecmwf/cfgrib>
-
-<https://www.r-bloggers.com/2019/08/maximum-likelihood-estimation-from-scratch/>
-
-<https://www.uaar.edu.pk/fs/books/12.pdf>
-
-<https://scholarsarchive.byu.edu/cgi/viewcontent.cgi?article=3508&context=etd>
