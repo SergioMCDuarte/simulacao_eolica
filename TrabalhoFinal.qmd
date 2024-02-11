@@ -14,8 +14,16 @@ editor:
   markdown:
     wrap: 72
 bibliography: bibliografia.bib
-biblio-style: "apalike"
+csl: ieee.csl
 link-citations: true
+lang: pt
+---
+
+
+<style>
+body {
+text-align: justify}
+</style>
 ---
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
@@ -29,6 +37,7 @@ source('src/vento.R')
 source('src/energia.R')
 source('src/turbina.R')
 source('src/simulacao.R')
+source('src/financas.R')
 ```
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
@@ -36,6 +45,10 @@ source('src/simulacao.R')
 velocidade.vento <- read.csv('dados/velocidade_de_vento.csv')
 # removemos os ano de 2020 porque foi anómalo em termos do consumo de energia
 precos.energia <- read.csv('dados/precos_energia.csv') %>% filter(ano == 2022)
+
+turbina <- read.csv2('dados/enercon_E70_2000.csv', sep = ',', dec='.')
+colnames(turbina) <- c('v','p')
+
 ```
 
 # Resumo
@@ -44,18 +57,18 @@ precos.energia <- read.csv('dados/precos_energia.csv') %>% filter(ano == 2022)
 
 Uma correcta avaliação da viabilidade económica de um projecto de
 energia eólica é seguramente um dos pontos mais importantes no
-desenvolvimento do mesmo @intro. Esta avaliação representa um desafio
+desenvolvimento do mesmo @intro1. Esta avaliação representa um desafio
 uma vez que o cálculo da mesma está necessariamente assente em processos
 estocásticos: a velocidade do vento e o preço da energia. A potência
 eólica disponível para extração varia com o cubo da velocidade do vento,
 pelo que aproximar o cálculo energético através de valores médios pode
-levar erros grosseiros que mascaram a incerteza associada ao
-projecto\[**ref: Introdução**\].
+levar erros grosseiros que mascaram a incerteza associada ao projecto
+@intro3.
 
 Modelar a incerteza deste processo pode então revelar-se crucial para
 uma melhor avaliação do risco associado ao projecto.
 
-## Contexto financeiro
+## Contexto económico
 
 Um projecto de produção de energia deverá ser avaliado financeiramente
 como qualquer investimento. Desta forma, torna-se importante
@@ -121,7 +134,8 @@ seguinte função densidade de probabilidade: $$
 f(x|{\beta, \theta}) = \frac{\beta}{\theta^\beta}x^{\beta-1}e^{-(\frac{x}{\theta})^\beta}
 $$
 
-```{r echo=FALSE}
+```{r echo=FALSE, fig.align='center'}
+
 beta <- 2
 theta <- 7
 
@@ -144,19 +158,16 @@ esperadas durante o tempo de vida do projecto e assim estimar a energia
 produzida. Através da curva de potência característica de uma turbina
 eólica é possível converter a velocidade de vento numa potência.
 
-```{r echo=FALSE}
-source('src/turbina.R')
+```{r echo=FALSE, warning=FALSE, message=FALSE, fig.align='center'}
 
-pt <- curva.potencia(v)
-data.frame(v, pt) %>% 
-  ggplot(aes(x=v, y=pt)) + 
-  geom_line() + 
+turbina %>% 
+  ggplot(aes(x=v, y=p)) + 
+  geom_point() +
   labs(
     x = "velocidade de vento [m/s]", 
-    y = TeX("$\\frac{P}{P_{nominal}}$"), 
-    title = TeX("Exemplo da curva de potência de uma turbina eólica"),
+    y = "potência [kW]", 
+    title = TeX("Curva de potência do aerogerador Enercon E70/2000"),
   ) + theme_minimal()
-
 ```
 
 Uma vez obtidos valores para a potência elétrica produzida pela turbina,
@@ -230,21 +241,21 @@ iterações):
 
 Antes iniciar a recolha de dados foi escolhido um local fictício para a
 implantação do parque eólico a estudar, de modo a obter os dados de
-velocidades de vento correspondentes.
-
-**\[INSERIR IMAGEM DA GRELHA\]**
+velocidades de vento correspondentes. O local apoximadamente a
+localidade de Monchique, no sul de Portugal. As coordenadas exactas
+poderão ser encontradas no ficheiro `etl/reanalises_download.py`.
 
 ### Velocidade de vento
 
-Os dados de velocidades de vento são provenientes do produto ERA 5
+Os dados de velocidades de vento são provenientes do produto ERA5
 referente a reanálises atmosférias, fornecido pelo ECMWF @era5. Estes
 dados consistem numa série temporal das componentes Norte e Oeste das
 velocidades de vento, numa grelha horizontal, a uma altitude de 100m, em
-formato GRIB.
+formato GRIB. Os dados GRIB foram processados recorrendo à linguagem de
+programação Python, devido à existência de uma biblioteca específica
+para trabalhar este formato, suportado pelo próprio ECMWF @cfgrib.
 
-**\[INSERIR IMAGEM DE EXEMPLO\]**
-
-De modo a utilizaros dados, as componentes do vento foram combinadas
+De modo a utilizar os dados, as componentes do vento foram combinadas
 para obter a norma da velocidade do vento:
 
 $$
@@ -258,17 +269,24 @@ utilização.
 ### Preço de energia
 
 Os dados de preços de energia foram obtidos através do *website* da OMIE
-(operador do mercado Ibérico de energia), referentes ao ano de
-2022\[**REF**\]. Os preços são apresentados numa série temporal, em
-formato CSV, em €/MWh.
+(operador do mercado Ibérico de energia), referentes ao ano de 2022
+@omie. Os preços são apresentados numa série temporal, em formato CSV,
+em €/MWh.
 
 ### Curva de potência
 
-LIVRO
+A curva de potência é uma característica do aerogerador escolhide. No
+exemplo em estudo, foi selecionado o Enercon E70/2000 @windpower, com
+uma potência nominal de 2000kW. A escolha deveu-se à existência de uma
+parque eólico na zona em estudo, cujos equipamentos correspondem a este
+modelo @windpower2 .
 
 ### Custos de investimento
 
-LIVRO
+Os custos de instalação de podem variar de acordo com diferentes
+factores, como o tipo de terreno, tipos de acesso, ligação à rede, etc.
+Neste estudo será assumido um custo médio inicial de 1297€/kW e 2% do
+custo inicial para custos recorrentes anuais (O&M) @intro2.
 
 ## Preparação dos dados para a simulação
 
@@ -297,7 +315,78 @@ M(\beta, \theta|X) &= \log{\left(L(\beta, theta|X)\right)} ~\\
 
 \end{aligned}
 ```
-De onde obtemos a seguinte distribuição:
+### Distribuição de preços
+
+Os dados de preços da energia eléctrica utilizados foram referentes ao
+ano de 2022. Estes não seguem uma distribuição comum, pelo que a mesmo
+foi aproximada com uma mistura de 3 distruições normais, através da
+bilbioteca **`mixtools`** do R.
+
+A escolha do número 3 para o número de distribuições na mistura deveu-se
+sobretudo aos resultados empíricos dos vários testes realizados. No
+entanto este valor não é descabido pois podemos racionalizá-lo da
+seguinte forma: existem períodos em que a produção de energia é elevada,
+o que faz baixar o preço; períodos em que é reduzida, o que faz aumentar
+o preço; e períodos em que tende para a principal moda da distribuição,
+que faz com o preço se aproxime da média, gerando assim 3 processos de
+geração de preços.
+
+### Cálculo da TIR
+
+Para calcular a TIR é necessário proceder ao cálculo do *cashflow* ao
+longo do tempo de vida do projecto. Como foi apresentado anteriormente,
+a TIR pode ser encontrada optimizando a seguinte função:
+
+$$
+\sum^n_{j=0}\frac{R_{Lj}}{(1+TIR)^j}-\sum^{n-1}_{j=0}\frac{I_j}{(1+TIR)^j} = 0
+$$
+
+Como simplificação, neste cáclulo será assumido que o investimento será
+efectuado na totalidade no 0, ou seja:
+
+$$
+\sum^n_{j=0}\frac{R_{Lj}}{(1+TIR)^j} - I_t = 0
+$$
+
+# **Resultados e discussão**
+
+## Preparação dos dados
+
+### Custos de instalação e O&M
+
+### Curva de Potência
+
+```{r echo=FALSE, warning=FALSE, message=FALSE, fig.align='center'}
+curva.potencia <- function(x, L=1, k=1, x0=0) {
+  return(L/(1+exp(-k*(x-x0))))
+}
+
+funcao.custo.curva.potencia <- function(params, x, y) {
+  fit <- curva.potencia(x, params[1], params[2], params[3])
+  return(sum((y-fit)^2))
+}
+
+
+curva.potencia.params <- optim(c(3000, 0.5, 8), 
+                               funcao.custo.curva.potencia, 
+                               x=turbina$v, 
+                               y=turbina$p)
+
+turbina %>% 
+  ggplot(aes(x=v, y=p)) + 
+  geom_point() + 
+  geom_line(aes(x=v, y=curva.potencia(v, 
+                                      2050,
+                                      curva.potencia.params$par[2], 
+                                      curva.potencia.params$par[3]))) + 
+  labs(
+    x = "velocidade de vento [m/s]", 
+    y = "potência [kW]", 
+    title = TeX("Curva de potência do aerogerador Enercon E70/2000"),
+  ) + theme_minimal()
+```
+
+### Distribuição das velocidade de vento
 
 ```{r echo=FALSE, warning=FALSE}
 set.seed(1)
@@ -332,28 +421,14 @@ ks.test(rvs.vento,
         velocidade.vento$velocidade_de_vento)
 ```
 
-### Distribuição de preços
-
-Os dados de preços da energia eléctrica utilizados foram referentes ao
-ano de 2022. Estes não seguem uma distribuição comum, pelo que a mesmo
-foi aproximada com uma mistura de 3 distruições normais, através da
-bilbioteca **`mixtools`** do R.
-
-A escolha do número 3 para o número de distribuições na mistura deveu-se
-sobretudo aos resultados empíricos dos vários testes realizados. No
-entanto este valor não é descabido pois podemos racionalizá-lo da
-seguinte forma: existem períodos em que a produção de energia é elevada,
-o que faz baixar o preço; períodos em que é reduzida, o que faz aumentar
-o preço; e períodos em que tende para a principal moda da distribuição,
-que faz com o preço se aproxime da média, gerando assim 3 processos de
-geração de preços.
+### Distribuição do preço da energia
 
 ```{r echo=FALSE, warning=FALSE, message=FALSE, results='hide', collapse=TRUE, error=FALSE}
 set.seed(1)
 params.preco <- normalmixEM(x=precos.energia$preco, k=3, maxit = 5000)
 ```
 
-```{r echo=FALSE, warning=FALSE, message=FALSE}
+```{r echo=FALSE, warning=FALSE, message=FALSE, fig.align='center'}
 
 rvs.preco <- preco.sim(length(precos.energia$preco), 
                        params.preco)
@@ -362,7 +437,7 @@ dnormmixt <- function(t, lam, mu, sig){
   m <- length(lam)
   f <- 0
   for (j in 1:m) {
-    f <- f + lam[j]*dnorm(t,mean=mu[j],sd=sig[j])
+    f <- f + lam[j]*(sqrt(dnorm(t,mean=mu[j],sd=sig[j])**2))
   }
   f
 }
@@ -382,6 +457,7 @@ precos.energia %>%
     y = "densidade de probabilidade", 
     title = "Distribuição dos preços da energia no mercado Ibérico no ano de 2022"
   ) + theme_minimal()
+
 ```
 
 Apesar de a função de densidade de probabilidade gerada não ser
@@ -394,78 +470,58 @@ nula de igualdade de distribuições.
 ks.test(precos.energia$preco, rvs.preco)
 ```
 
-### Cálculo da TIR
-
-Para calcular a TIR é necessário proceder ao cálculo do *cashflow* ao
-longo do tempo de vida do projecto. Como foi apresentado anteriormente,
-a TIR pode ser encontrada optimizando a seguinte função:
-
-$$
-\sum^n_{j=0}\frac{R_{Lj}}{(1+TIR)^j}-\sum^{n-1}_{j=0}\frac{I_j}{(1+TIR)^j} = 0
-$$
-
-```{r}
-val <- function(a, r, i) {
-  j <- 1:length(r)
-  return(sum(Rj/(1+a)^j) - sum(Ij/(1+a)^(j-1)))
-}
-
-val.funcao.custo <- function(a,r,i) {
-  
-  return(sqrt(val(a,r,i)**2))
-}
-
-tempo.vida <- 20
-It <- 10000000 # investimento total
-Ij <- replicate(tempo.vida, It/tempo.vida)
-Comj <- replicate(tempo.vida, It*0.01)
-Rj <- replicate(tempo.vida, 650000) - Comj
-
-j <- 1:tempo.vida
-a <- 0.2
-
-val.funcao.custo(a,Rj,Ij)
-
-optim(0.01, val.funcao.custo,Rj,Ij, method = "Brent", lower = -1, upper = 1)
-```
-
-Custo inicial de instalação e O&M
-
-> Em termos gerais, pode afirmar-se que, para Portugal, o investimento
-> unitário total poderá variar entre um valor médio-baixo de 1000 €/kW e
-> um valor médio-alto de 1500 €/kW, sendo o investimento unitário médio
-> reportado de 1297 €/kW (\[Fonte: International Energy Agency\])\*.
-> Para os encargos de O&M, um valor médio entre 1% e 2% do investimento
-> total é correntemente usado.
-
-selecionar turbina
-
--   altura
-
--   curva de potência
-
--   custo
-
-# **Resultados e discussão**
-
 ### Simulação
 
+```{r echo=FALSE, warning=FALSE, message=FALSE, fig.align='center'}
+
+n.sim <- 300
+potencia.turbina <- 2 # MW
+numero.turbinas <- 5
+tempo.vida <- 20
+
+It <- preco.instalacao(potencia.turbina, numero.turbinas)
+Ij <- replicate(tempo.vida, It/tempo.vida)
+Comj <- replicate(tempo.vida, custos.om(potencia.turbina, numero.turbinas, tempo.vida)/tempo.vida)
+
+
+tir.vec <- c()
+for (i in 1:n.sim) {
+  energia <- matrix(curva.potencia(rweibull(n=8760*tempo.vida, 
+                                          shape=params.vento$par[1], 
+                                          scale=params.vento$par[2]), 
+                                   L=2050, 
+                                   k=curva.potencia.params$par[2], 
+                                   x0=curva.potencia.params$par[3])*numero.turbinas/1000,
+                  ncol = tempo.vida)
+
+
+  preco.energia <- matrix(preco.sim(8760*tempo.vida, params.preco), 
+                          ncol = tempo.vida)
+  
+  # rentabilidade
+  Rj <- colSums(energia*preco.energia)
+  Rlj <- Rj-Comj
+    
+  tir.vec <- append(tir.vec, tir(R=Rlj, I=Ij, l.inf=-10, l.sup=10)$par)
+}
+
+ci95 <- confint(lm(tir.vec ~ 1))
+
+data.frame(tir.vec) %>% 
+  ggplot(aes(x=tir.vec)) +
+  geom_histogram(bins = 10) +
+  geom_vline(aes(xintercept=ci95[1], colour="CI 95%"), colour='red') +
+  geom_vline(aes(xintercept=ci95[2]), colour='red') +
+  labs(
+    x = "TIR", 
+    y = "Frequência", 
+    title =paste("Distribuição da TIR obtida na simulação de Monte Carlo com n =", n.sim)
+  ) + theme_minimal()
+
+```
+
 ```{r}
-n.sim <- 100 # 
-potencia.turbina <- 1 # MW
-numero.turbinas <- 10
-tempo.vida <- 20 # anos
-taxa.de.atualização <- .05
-
-retorno <- replicate(n.sim, 
-                      simulacao.retorno(potencia.turbina, 
-                                        numero.turbinas, 
-                                        tempo.vida, 
-                                        taxa.de.atualização, 
-                                        params.vento, 
-                                        params.preco))
-
-hist(retorno)
+ci95
 ```
 
 # Conclusão
