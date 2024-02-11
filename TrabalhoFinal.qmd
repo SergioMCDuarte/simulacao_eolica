@@ -2,7 +2,7 @@
 title: "Simulação probabilística da TIR de um investimento num parque eólico"
 date: 2024-02-12
 author:
-  - name: Sérgio Duarte
+  - name: Sérgio Duarte, nº2302287
     email: 2302287@estudante.uab.pt 
     affiliation: 
       - name: Universidade Aberta
@@ -10,9 +10,6 @@ author:
 format: 
   pdf:
       page-layout: article
-  html:
-      page-layout: article
-  
 editor: 
   markdown:
     wrap: 72
@@ -529,7 +526,7 @@ precos.energia %>%
   labs(
     x = "preço da energia [€/MWh]", 
     y = "densidade de probabilidade", 
-    title = "Distribuição dos preços da energia no mercado Ibérico entre 2018-2022"
+    title = "Preços da energia no mercado Ibérico entre 2018-2022"
   ) + theme_minimal() + 
   scale_colour_discrete(name="",
                             breaks=c("Dados observados", "Distribuição ajustada"),
@@ -547,7 +544,7 @@ ks.test(precos.energia$preco, rvs.preco)
 
 ### Simulação
 ```{r echo=FALSE, warning=FALSE, message=FALSE, fig.align='center'}
-n.sim <- 100
+n.sim <- 10000
 ```
 
 Utilizando os parâmetros apresentados nesta secção, procedeu-se a uma simulação de Monte Carlo, n=`r n.sim`. Desta simulação obteve-se a seguinte distribuição de valores para a TIR.
@@ -595,7 +592,7 @@ data.frame(tir.vec) %>%
   labs(
     x = "TIR", 
     y = "Frequência", 
-    title =paste("Distribuição da TIR obtida na simulação de Monte Carlo com n =", n.sim)
+    title =paste("Distribuição da TIR com n =", n.sim)
   ) + theme_minimal() + 
   scale_colour_discrete(name="",
                             breaks=c("TIR", "CI 95%"),

@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="pt" xml:lang="pt"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.3.353">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="Sérgio Duarte, nº2302287">
+
+<title>Simulação probabilística da TIR de um investimento num parque eólico</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for citations */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+}
+.hanging-indent div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}</style>
+
+
+<script src="TrabalhoFinal_files/libs/clipboard/clipboard.min.js"></script>
+<script src="TrabalhoFinal_files/libs/quarto-html/quarto.js"></script>
+<script src="TrabalhoFinal_files/libs/quarto-html/popper.min.js"></script>
+<script src="TrabalhoFinal_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="TrabalhoFinal_files/libs/quarto-html/anchor.min.js"></script>
+<link href="TrabalhoFinal_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="TrabalhoFinal_files/libs/quarto-html/quarto-syntax-highlighting.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="TrabalhoFinal_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="TrabalhoFinal_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="TrabalhoFinal_files/libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
+</head><body class="fullcontent">\usepackage{amsmath}
+
+  <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+
+
+
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Simulação probabilística da TIR de um investimento num parque eólico</h1>
+</div>
+
+
+<div class="quarto-title-meta-author">
+  <div class="quarto-title-meta-heading">Autor</div>
+  <div class="quarto-title-meta-heading">Afiliações</div>
+  
+    <div class="quarto-title-meta-contents">
+    <p class="author">Sérgio Duarte, nº2302287 </p>
+  </div>
+    <div class="quarto-title-meta-contents">
+        <p class="affiliation">
+            Universidade Aberta
+          </p>
+        <p class="affiliation">
+            
+          </p>
+      </div>
+    </div>
+
+<div class="quarto-title-meta">
+
+      
+    <div>
+    <div class="quarto-title-meta-heading">Data de Publicação</div>
+    <div class="quarto-title-meta-contents">
+      <p class="date">12 de fevereiro de 2024</p>
+    </div>
+  </div>
+  
+    
+  </div>
+  
+
+</header>
+
+<style>
+body {
+text-align: justify}
+</style>
+<hr>
+<section id="resumo" class="level1">
+<h1>Resumo</h1>
+<p>Este tabalho propõe um método probilístico de avaliação de um investimento de um parque eólico, recorrendo a uma simulação de Monte Carlo. Para proceder a simulação foram recolhidos dados de velocidades de vento e de preços de energia, e subsquentemente modeladas as suas distribuições. Como resultado foi obtida uma distribuição da Taxa Interna de Rendibilidade (TIR) do investimento, deste modo incorporando no resultado a variabilidade inerente às variáveis do cálculo.</p>
+</section>
+<section id="enquadramento" class="level1">
+<h1>Enquadramento</h1>
+<p>Uma correcta avaliação da viabilidade económica de um projecto de energia eólica é seguramente um dos pontos mais importantes no desenvolvimento do mesmo <span class="citation" data-cites="intro1"><a href="#ref-intro1" role="doc-biblioref">[1]</a></span>. Esta avaliação representa um desafio uma vez que o cálculo da mesma está necessariamente assente em processos estocásticos: a velocidade do vento e o preço da energia. A potência eólica disponível para extração varia com o cubo da velocidade do vento, pelo que aproximar o cálculo energético através de valores médios pode levar erros grosseiros que mascaram a incerteza associada ao projecto <span class="citation" data-cites="intro3"><a href="#ref-intro3" role="doc-biblioref">[2]</a></span>.</p>
+<p>Modelar a incerteza deste processo pode então revelar-se crucial para uma melhor avaliação do risco associado ao projecto.</p>
+<section id="contexto-económico" class="level2">
+<h2 class="anchored" data-anchor-id="contexto-económico">Contexto económico</h2>
+<p>Um projecto de produção de energia deverá ser avaliado financeiramente como qualquer investimento. Desta forma, torna-se importante contabilizar todos os encargos e recebimentos associados ao projecto, de modo a calcular o mapa de fluxo de caixa (<em>cashflow</em>).</p>
+<p>Importa clarificar algumas definições antes de avançar para a metodologia de cálculo.</p>
+<p>Taxa de atualização: <span class="math inline">\(a = [(1+T1)(1+T2)(1+T3)]-1\)</span>,</p>
+<p>onde:</p>
+<p><span class="math inline">\(T1:\)</span> taxa de rendimento real</p>
+<p><span class="math inline">\(T2:\)</span> taxa de risco</p>
+<p><span class="math inline">\(T3:\)</span> taxa de inflação</p>
+<p>No caso presente a taxa de inflação será assumida como nula, pois afeta recebimentos e pagamentos (chamada de avaliação a preços constantes).</p>
+<p>Os indicadores comuns de avaliação de investimentos são:</p>
+<ul>
+<li>Valor Atual Líquido (VAL);</li>
+<li>Taxa Interna de Rendibilidade (TIR);</li>
+</ul>
+<p>O VAL é dado por:</p>
+<p><span class="math display">\[
+VAL = \sum_{j=i}^n\frac{R_{Lj}}{(1+a)^j} - \sum_{j=0}^{n-1} \frac{I_j}{(1+a)^j}
+\]</span></p>
+<p>onde n é o tempo de vida útil do investimento em anos, <span class="math inline">\(R_{Lj}\)</span> é o retorno anual líquido, dado por <span class="math inline">\(R_j-Operaçao\&amp;Manutenção\)</span> e <span class="math inline">\(I_j\)</span> representa a anuidade do investimento no ano j. Este valor representa o retorno esperado no final do tempo de vida útil do investimento. A TIR representa a taxa de atualização que anula o VAL, ou seja, a taxa de rendibilidade mínima necessária para cobrir o investimento efetuado. Este valor pode ser obtido através da optimização da seguinte expressão: <span class="math display">\[
+\sum_{j=i}^n\frac{R_{Lj}}{(1+TIR)^j} - \sum_{j=0}^{n-1} \frac{I_j}{(1+TIR)^j} = 0
+\]</span></p>
+<p>Para calcular estes indicadores é necessário obter dados de:</p>
+<ul>
+<li>Investimento inicial</li>
+<li>O&amp;M</li>
+<li>Retorno</li>
+</ul>
+<p>No presente estudo será assumido que não existem regimes bonificados e toda a energia é vendida a preço de mercado, pelo que este preço deverá ser obtido de uma distribuição anual de preços.</p>
+</section>
+<section id="contexto-energético" class="level2">
+<h2 class="anchored" data-anchor-id="contexto-energético">Contexto energético</h2>
+<p>O retorno de um investimento eólico está directamente relacionado com o recurso disponível na área de instalação do projeto. Tipicamente, a velocidade do vento segue uma distribuição de Weibull, tal que <span class="math inline">\(X \sim Weibull(\beta, \theta)\)</span>, onde <span class="math inline">\(\beta\)</span> é o factor de forma e <span class="math inline">\(\theta\)</span> o factor de escala da distribuição. Esta distribuição tem a seguinte função densidade de probabilidade: <span class="math display">\[
+f(x|{\beta, \theta}) = \frac{\beta}{\theta^\beta}x^{\beta-1}e^{-(\frac{x}{\theta})^\beta}
+\]</span></p>
+<div class="cell" data-layout-align="center">
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="TrabalhoFinal_files/figure-html/unnamed-chunk-3-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>Com base nesta distribuição podemos simular as velocidade de vento esperadas durante o tempo de vida do projecto e assim estimar a energia produzida. Através da curva de potência característica de uma turbina eólica é possível converter a velocidade de vento numa potência.</p>
+<div class="cell" data-layout-align="center">
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="TrabalhoFinal_files/figure-html/unnamed-chunk-4-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>Uma vez obtidos valores para a potência elétrica produzida pela turbina, a energia anual produzida pode ser calculada por:</p>
+<p><span class="math display">\[
+E_a = \int^{u_{max}}_{u_0}f(u) P(u)du
+\]</span> Os elementos expostos permitem então proceder a uma simulção probabilística da TIR, obtendo um intervalo de confiança para a mesma, de forma a modela a incerteza inerente ao projecto.</p>
+</section>
+</section>
+<section id="metodologia" class="level1">
+<h1>Metodologia</h1>
+<section id="arquitetura-da-simulação" class="level2">
+<h2 class="anchored" data-anchor-id="arquitetura-da-simulação">Arquitetura da simulação</h2>
+<p><strong>Objectivo: Obter intervalo de confiança para TIR, dados os custos iniciais e vida útil do projecto</strong></p>
+<p>Procedimentos preliminares:</p>
+<ul>
+<li><p>Obter custos iniciais</p>
+<ul>
+<li><p>Custos de instalação</p></li>
+<li><p>Custos dos equipamentos</p></li>
+<li><p>Custos de O&amp;M</p></li>
+<li><p>Taxa de atualização -&gt; como definir?</p></li>
+<li><p>definir como vai ser pago o investimento</p></li>
+</ul></li>
+<li><p>Obter dados velocidade de vento</p>
+<ul>
+<li>Ajustar distribuição de Weibull</li>
+</ul></li>
+<li><p>Obter dados de mercado</p>
+<ul>
+<li>Ajustar distribuição de Weibull</li>
+</ul></li>
+<li><p>Obter curva de potência da turbina selecionada</p></li>
+</ul>
+<p>Simulação de Monte Carlo (granularidade horária,&nbsp;<em>N</em>&nbsp;horas,&nbsp;<em>i</em> iterações):</p>
+<ul>
+<li><p>Correr&nbsp;<em>i</em> vezes:</p>
+<ul>
+<li><p>Simular velocidades de vento</p></li>
+<li><p>Aplicar curva de potência ao vector de velocidade de vento para obter a potência horária</p>
+<ul>
+<li>Como os segmentos são horários, a potência equivale à energia E = P * dt, dt = 1</li>
+</ul></li>
+<li><p>Simular preço de energia</p></li>
+<li><p>Multiplicação elementar dos vectores energia e vento</p></li>
+<li><p>Fazer agregação anual</p></li>
+<li><p>Fazer balanço</p></li>
+<li><p>Calcular taxa interna de rendibilidade</p></li>
+<li><p>Guardar resultado</p></li>
+</ul></li>
+<li><p>Obter distribuição de TIR</p></li>
+</ul>
+</section>
+<section id="recolha-de-dados" class="level2">
+<h2 class="anchored" data-anchor-id="recolha-de-dados">Recolha de Dados</h2>
+<p>Antes iniciar a recolha de dados foi escolhido um local fictício para a implantação do parque eólico a estudar, de modo a obter os dados de velocidades de vento correspondentes. O local apoximadamente a localidade de Monchique, no sul de Portugal. As coordenadas exactas poderão ser encontradas no ficheiro <code>etl/reanalises_download.py</code>.</p>
+<section id="velocidade-de-vento" class="level3">
+<h3 class="anchored" data-anchor-id="velocidade-de-vento">Velocidade de vento</h3>
+<p>Os dados de velocidades de vento são provenientes do produto ERA5 referente a reanálises atmosférias, fornecido pelo ECMWF <span class="citation" data-cites="era5"><a href="#ref-era5" role="doc-biblioref">[3]</a></span>. Estes dados consistem numa série temporal das componentes Norte e Oeste das velocidades de vento, numa grelha horizontal, a uma altitude de 100m, em formato GRIB. Os dados GRIB foram processados recorrendo à linguagem de programação Python, devido à existência de uma biblioteca específica para trabalhar este formato, suportado pelo próprio ECMWF <span class="citation" data-cites="cfgrib"><a href="#ref-cfgrib" role="doc-biblioref">[4]</a></span>.</p>
+<p>De modo a utilizar os dados, as componentes do vento foram combinadas para obter a norma da velocidade do vento:</p>
+<p><span class="math display">\[
+\overline V = |U,V| = \sqrt{U^2 + V^2}
+\]</span></p>
+<p>Foi feita a média espacial da grelha, para cada instante da série, e os dados foram convertidos para formato CSV, para facilitar a sua utilização.</p>
+</section>
+<section id="preço-de-energia" class="level3">
+<h3 class="anchored" data-anchor-id="preço-de-energia">Preço de energia</h3>
+<p>Os dados de preços de energia foram obtidos através do <em>website</em> da OMIE (operador do mercado Ibérico de energia), referentes ao ano de 2022 <span class="citation" data-cites="omie"><a href="#ref-omie" role="doc-biblioref">[5]</a></span>. Os preços são apresentados numa série temporal, em formato CSV, em €/MWh.</p>
+</section>
+<section id="curva-de-potência" class="level3">
+<h3 class="anchored" data-anchor-id="curva-de-potência">Curva de potência</h3>
+<p>A curva de potência é uma característica do aerogerador escolhide. No exemplo em estudo, foi selecionado o Enercon E70/2000 <span class="citation" data-cites="windpower"><a href="#ref-windpower" role="doc-biblioref">[6]</a></span>, com uma potência nominal de 2000kW. A escolha deveu-se à existência de uma parque eólico na zona em estudo, cujos equipamentos correspondem a este modelo <span class="citation" data-cites="windpower2"><a href="#ref-windpower2" role="doc-biblioref">[7]</a></span> .</p>
+</section>
+<section id="custos-de-investimento" class="level3">
+<h3 class="anchored" data-anchor-id="custos-de-investimento">Custos de investimento</h3>
+<p>Os custos de instalação de podem variar de acordo com diferentes factores, como o tipo de terreno, tipos de acesso, ligação à rede, etc. Neste estudo será assumido um custo médio inicial de 1297€/kW e 2% do custo inicial para custos recorrentes anuais (O&amp;M) <span class="citation" data-cites="intro2"><a href="#ref-intro2" role="doc-biblioref">[8]</a></span>.</p>
+</section>
+</section>
+<section id="preparação-dos-dados-para-a-simulação" class="level2">
+<h2 class="anchored" data-anchor-id="preparação-dos-dados-para-a-simulação">Preparação dos dados para a simulação</h2>
+<section id="distribuição-de-vento" class="level3">
+<h3 class="anchored" data-anchor-id="distribuição-de-vento">Distribuição de vento</h3>
+<p>Os parâmetros da função densidade de probabilidade da velocidade de vento foram estimados a partir dos dados recolhidos, utilizando o estimador de máxima verosimilhança. O estimador foi minimzado numericamente recorrendo à função <strong><code>optim</code></strong> do R <span class="citation" data-cites="mler"><a href="#ref-mler" role="doc-biblioref">[9]</a></span>.</p>
+<section id="estimador-de-máxima-verosimilhança" class="level4">
+<h4 class="anchored" data-anchor-id="estimador-de-máxima-verosimilhança">Estimador de máxima verosimilhança</h4>
+<p>O estimador é dado por:</p>
+<p><span class="math display">\[\begin{align*}
+f(x|{\beta, \theta}) &amp;= \frac{\beta}{\theta^\beta}x^{\beta-1}e^{-(\frac{x}{\theta})^\beta} \Rightarrow \\
+L(\beta, \theta | X)
+&amp;= f(x_1|\beta, \theta)f(x_2|\beta, \theta)...f(x_n|\beta, \theta) \\
+&amp;= \prod^n_{i=0} \frac{\beta}{\theta}\left(\frac{x_i}{\theta}\right)^{(\beta-1)} e^{-\left(\frac{x_i}{\theta}\right)^\beta} \\
+&amp;= \left(\frac{\beta}{\theta}\right)^n \prod^n_{i=0}x_i^{(\beta-1)}e^{-\left(\frac{x_i}{\theta}\right)^\beta}\\
+M(\beta, \theta|X) &amp;= \log{\left(L(\beta, theta|X)\right)} ~\\
+&amp;= \log{\left(\left(\frac{\beta}{\theta}\right)^n\prod^n_{i=0}x_i^{(\beta-1)}e^{-\left(\frac{x_i}{\theta}\right)^\beta}\right)} \\
+&amp;= n\left[\log{\beta}-\log{\theta}\right] + \sum^n_{i=0} \left( (\beta-1)\log{x_i} - \left(\frac{x_i}{\theta}\right)^\beta\right)
+\end{align*}\]</span></p>
+</section>
+</section>
+<section id="distribuição-de-preços" class="level3">
+<h3 class="anchored" data-anchor-id="distribuição-de-preços">Distribuição de preços</h3>
+<p>Os dados de preços da energia eléctrica utilizados foram referentes ao ano de 2022. Estes não seguem uma distribuição comum, pelo que a mesmo foi aproximada com uma mistura de 3 distruições normais, através da bilbioteca <strong><code>mixtools</code></strong> do R.</p>
+<p>A escolha do número 3 para o número de distribuições na mistura deveu-se sobretudo aos resultados empíricos dos vários testes realizados. No entanto este valor não é descabido pois podemos racionalizá-lo da seguinte forma: existem períodos em que a produção de energia é elevada, o que faz baixar o preço; períodos em que é reduzida, o que faz aumentar o preço; e períodos em que tende para a principal moda da distribuição, que faz com o preço se aproxime da média, gerando assim 3 processos de geração de preços.</p>
+</section>
+<section id="cálculo-da-tir" class="level3">
+<h3 class="anchored" data-anchor-id="cálculo-da-tir">Cálculo da TIR</h3>
+<p>Para calcular a TIR é necessário proceder ao cálculo do <em>cashflow</em> ao longo do tempo de vida do projecto. Como foi apresentado anteriormente, a TIR pode ser encontrada optimizando a seguinte função:</p>
+<p><span class="math display">\[
+\sum^n_{j=0}\frac{R_{Lj}}{(1+TIR)^j}-\sum^{n-1}_{j=0}\frac{I_j}{(1+TIR)^j} = 0
+\]</span></p>
+<p>Como simplificação, neste cáclulo será assumido que o investimento será efectuado na totalidade no 0, ou seja:</p>
+<p><span class="math display">\[
+\sum^n_{j=0}\frac{R_{Lj}}{(1+TIR)^j} - I_t = 0
+\]</span></p>
+</section>
+</section>
+</section>
+<section id="resultados-e-discussão" class="level1">
+<h1>Resultados e discussão</h1>
+<section id="preparação-dos-dados" class="level2">
+<h2 class="anchored" data-anchor-id="preparação-dos-dados">Preparação dos dados</h2>
+<section id="custos-de-instalação-e-om" class="level3">
+<h3 class="anchored" data-anchor-id="custos-de-instalação-e-om">Custos de instalação e O&amp;M</h3>
+<p>O parque a ser estudado será composto por 5 aerogeradores Enercon E70/2000 de 2MW de potêncial nominal cada, totalizando 10MW de potência instalada. Utilizando os custos unitários referidos em <span class="citation" data-cites="intro2"><a href="#ref-intro2" role="doc-biblioref">[8]</a></span>, obtemos os seguintes custos iniciais e de operação e manutenção:</p>
+<p><span class="math display">\[\begin{align*}
+Custos\ iniciais: I_t &amp;= 1297[\frac{\texteuro}{kW}]\times10[MW]\times1000[\frac{kW}{MW}] \\
+&amp;= 12.97\times10^6\texteuro \\
+Custos\ O\&amp;M\ anuais: C_{OMj} &amp;= 2\% \times I_t = 259400\texteuro
+\end{align*}\]</span></p>
+</section>
+<section id="curva-de-potência-1" class="level3">
+<h3 class="anchored" data-anchor-id="curva-de-potência-1">Curva de Potência</h3>
+<p>Utilizando os dados da curva de potência da turbina Enercon E70/2000, ajusta-se um modelo logístico da forma:</p>
+<p><span class="math display">\[
+f(u) = \frac{L}{1+e^{-k(u-u_0)}}
+\]</span> Onde: <span class="math inline">\(L:\)</span> supremo dos dados observados <span class="math inline">\(k:\)</span> taxa de crescimento <span class="math inline">\(u_0:\)</span> centro da curva</p>
+<p>O modelo foi ajustado pela minimização numérica de uma função objectivo da forma:</p>
+<p><span class="math display">\[
+g(L,k,u_0) = (y-\frac{L}{1+e^{-k(u-u_0)}})^2
+\]</span></p>
+<div class="cell" data-layout-align="center">
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="TrabalhoFinal_files/figure-html/unnamed-chunk-5-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>Através do ajuste obteve-se os parâmetros:</p>
+<p>L = 2066.7895249</p>
+<p>k = 0.6756282</p>
+<p><span class="math inline">\(u_0\)</span> = 9.272849</p>
+<p>Na curva apresentada acima, o parâmetro L foi forçado a 2050, pois este é o máximo empírico da curva.</p>
+</section>
+<section id="distribuição-das-velocidade-de-vento" class="level3">
+<h3 class="anchored" data-anchor-id="distribuição-das-velocidade-de-vento">Distribuição das velocidade de vento</h3>
+<p>Através do estimador de máxima verosimilhança obtive-se a seguinte curva:</p>
+<div class="cell">
+<div class="cell-output-display">
+<p><img src="TrabalhoFinal_files/figure-html/unnamed-chunk-6-1.png" class="img-fluid" width="672"></p>
+</div>
+</div>
+<p>A curva apresentada é parametrizada por:</p>
+<p><span class="math inline">\(\beta\)</span> = 2.2753044</p>
+<p><span class="math inline">\(\theta\)</span> = 6.5032212</p>
+<p>Visualmente verificamos um bom ajuste aos dados. O teste de <em>Kolmogorov-Smirnov</em> corrobora isto, não havendo evidência para rejeitar a hipótese nula de que as duas distribuições são diferentes.</p>
+<div class="cell">
+<div class="cell-output cell-output-stdout">
+<pre><code>
+    Asymptotic two-sample Kolmogorov-Smirnov test
+
+data:  rvs.vento and velocidade.vento$velocidade_de_vento
+D = 0.0097412, p-value = 0.1651
+alternative hypothesis: two-sided</code></pre>
+</div>
+</div>
+</section>
+<section id="distribuição-do-preço-da-energia" class="level3">
+<h3 class="anchored" data-anchor-id="distribuição-do-preço-da-energia">Distribuição do preço da energia</h3>
+<div class="cell">
+<div class="cell-output cell-output-stdout">
+<pre><code>   ano media.preco var.preco
+1 2018    57.45023  151.4779
+2 2019    47.86878  116.9475
+3 2020    33.98519  126.8547
+4 2021   112.00969 5580.9095
+5 2022   167.89105 4775.3367</code></pre>
+</div>
+</div>
+<p>Verifica-se que existe uma grande variância para anos de 2021 e 2022. A média destes anos também é bastante superior aos anos anteriores. É de notar também a média inferior do ano de 2020, provavelmente devida à pandemia. Estes dados sugerem que seria benéfico obter um maior número de dados, de modo a melhorar a representatividade dos mesmos e a evitar que fenómenos locais possam distorcer a distribuição.</p>
+<p>A mistura gaussiana encontrada que melhor se ajusta aos dados de preço da energia resulta na seguinte curva:</p>
+<div class="cell" data-layout-align="center">
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="TrabalhoFinal_files/figure-html/unnamed-chunk-10-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>Apesar de a função de densidade de probabilidade gerada não ser perfeira, verificamos que é muito próxima. No entanto, pelo teste de <em>KS</em> verificamos que existe evidência suficiente para rejeitar a hipótese nula de igualdade de distribuições até uma significância de 0.01%. Apesar disto, será usada esta distribuição para obter valores de preços, deixando a ressalva que poderá ser benéfico obter mais dados ou mudar o modelo de distribuição utilizado.</p>
+<div class="cell">
+<div class="cell-output cell-output-stdout">
+<pre><code>
+    Asymptotic two-sample Kolmogorov-Smirnov test
+
+data:  precos.energia$preco and rvs.preco
+D = 0.014627, p-value = 0.0001695
+alternative hypothesis: two-sided</code></pre>
+</div>
+</div>
+</section>
+<section id="simulação" class="level3">
+<h3 class="anchored" data-anchor-id="simulação">Simulação</h3>
+<p>Utilizando os parâmetros apresentados nesta secção, procedeu-se a uma simulação de Monte Carlo, n=10^{4}. Desta simulação obteve-se a seguinte distribuição de valores para a TIR.</p>
+<div class="cell" data-layout-align="center">
+<div class="cell-output-display">
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="TrabalhoFinal_files/figure-html/unnamed-chunk-13-1.png" class="img-fluid figure-img" width="672"></p>
+</figure>
+</div>
+</div>
+</div>
+<p>Esta distribuição tem um valor médio de 0.0506253. A apresentação da TIR na forma de uma distribuição permite ganhar alguma sensibilidade para valores prováveis, de forma a compará-la de forma mais informada com valores de retorno de outros investimentos. Para o projecto hipotético apresentado verifica-se uma TIR relativamente baixa para os 20 anos de investimento considerados, pelo que os potenciais investidores poderiam reconsiderar avançar com o mesmo. Os vários factores de variabilidade introduzidos na simulação dão mais confiança na interpretação dos resultados do introduzir meramente os valores médio da velocidade de vento e de preço de mercado. No entanto é preciso considerar também que as distribuições utilizadas podem ser melhoradas, principalmente no caso do preço da energia, visto que o ajuste não foi o melhor. Aumentar a escala temporal dos dados recolhidos pode ser uma forma de melhorar este cálculo.</p>
+</section>
+</section>
+</section>
+<section id="conclusão" class="level1">
+<h1>Conclusão</h1>
+<p>Os fatores que afetam o retorno de um investimento podem ser aproximados, dando aos investidores uma estimativa pontual. No entanto, para investimentos cujos fatores subjacentes são dominados por processos aleatórios, estas estimativas pontuais falham em capturar a variabilidade inerente. Neste trabalho foi proposta uma forma probabilística de avaliar um investimento num parque eólico. Este método teve por base uma simulação de Monte Carlo, que visou modelar a variabilidade introduzida pelo recurso eólico e pelo mercado de energia elétrica, resultando numa distribuição do valor da TIR esperada para um investimento hipotético. O resultado permite aos decisores terem uma visão probabilística do valor esperado, em contraponto com uma estimativa pontual, que em casos de comparação de investimentos pode gerar conclusões diferentes. No trabalho apresentado recorreu-se a algumas simplificações, como a metodologia de financiamento do projecto, a obtenção dos dados e o horizontes temporais dos dados utilizados. Este último foi bastante evidente nos dados dos preços da energia, onde se verificou uma grande alteração na distribuição anual. Seria interessante utilizar um conjunto de dados que correspondesse ao tempo de vida do projecto, aqui assumido como 20 anos.</p>
+</section>
+<section id="bibliografia" class="level1 unnumbered">
+
+
+</section>
+
+<div id="quarto-appendix" class="default"><section class="quarto-appendix-contents" role="doc-bibliography"><h2 class="anchored quarto-appendix-heading">Bibliografia</h2><div id="refs" class="references csl-bib-body" role="list">
+<div id="ref-intro1" class="csl-entry" role="listitem">
+<div class="csl-left-margin">[1] </div><div class="csl-right-inline">R. Castro, <em>Uma Introdução às Energias Renováveis: Eólica, Fotovoltaica e Mini-hídrica</em>, 2nd ed. IST Press, 2012, p. 10.</div>
+</div>
+<div id="ref-intro3" class="csl-entry" role="listitem">
+<div class="csl-left-margin">[2] </div><div class="csl-right-inline">R. Castro, <em>Uma Introdução às Energias Renováveis: Eólica, Fotovoltaica e Mini-hídrica</em>, 2nd ed. IST Press, 2012, p. 123.</div>
+</div>
+<div id="ref-era5" class="csl-entry" role="listitem">
+<div class="csl-left-margin">[3] </div><div class="csl-right-inline">Hersbach, H., et. al, <span>«Complete ERA5 from 1940: Fifth generation of ECMWF atmospheric reanalyses of the global climate. Copernicus Climate Change Service (C3S) Data Store (CDS). DOI: 10.24381/cds.143582cf»</span>. 2017.</div>
+</div>
+<div id="ref-cfgrib" class="csl-entry" role="listitem">
+<div class="csl-left-margin">[4] </div><div class="csl-right-inline">ECMWF, <span>«ecmwf/cfgrib: A Python interface to map GRIB files to the NetCDF Common Data Model following the CF Convention using ecCodes»</span>. <a href="https://github.com/ecmwf/cfgrib" class="uri">https://github.com/ecmwf/cfgrib</a>, 2024.</div>
+</div>
+<div id="ref-omie" class="csl-entry" role="listitem">
+<div class="csl-left-margin">[5] </div><div class="csl-right-inline">OMI, Polo Español S.A. (OMIE), <span>«Day-ahead market hourly price in Portugal | OMIE»</span>. <a href="https://www.omie.es/en/file-access-list?parents%5B0%5D=/&amp;parents%5B1%5D=Day-ahead%20Market&amp;parents%5B2%5D=1.%20Prices&amp;dir=%20Day-ahead%20market%20hourly%20price%20in%20Portugal&amp;realdir=marginalpdbcpt" class="uri">https://www.omie.es/en/file-access-list?parents%5B0%5D=/&amp;parents%5B1%5D=Day-ahead%20Market&amp;parents%5B2%5D=1.%20Prices&amp;dir=%20Day-ahead%20market%20hourly%20price%20in%20Portugal&amp;realdir=marginalpdbcpt</a>, 2024.</div>
+</div>
+<div id="ref-windpower" class="csl-entry" role="listitem">
+<div class="csl-left-margin">[6] </div><div class="csl-right-inline">The Wind Power, <span>«Enercon E70/2000 - Manufacturers and turbines - Online access - The Wind Power»</span>. <a href="https://www.thewindpower.net/turbine_en_174_enercon_e70-2000.php" class="uri">https://www.thewindpower.net/turbine_en_174_enercon_e70-2000.php</a>, 2024.</div>
+</div>
+<div id="ref-windpower2" class="csl-entry" role="listitem">
+<div class="csl-left-margin">[7] </div><div class="csl-right-inline">The Wind Power, <span>«Madrinha (Portugal) - Wind farms - Online access - The Wind Power»</span>. <a href="https://www.thewindpower.net/windfarm_en_4063_madrinha.php" class="uri">https://www.thewindpower.net/windfarm_en_4063_madrinha.php</a>, 2024.</div>
+</div>
+<div id="ref-intro2" class="csl-entry" role="listitem">
+<div class="csl-left-margin">[8] </div><div class="csl-right-inline">R. Castro, <em>Uma Introdução às Energias Renováveis: Eólica, Fotovoltaica e Mini-hídrica</em>, 2nd ed. IST Press, 2012, p. 179.</div>
+</div>
+<div id="ref-mler" class="csl-entry" role="listitem">
+<div class="csl-left-margin">[9] </div><div class="csl-right-inline">R on Alejandro Morales’ Blog, <span>«Maximum likelihood estimation from scratch | R-bloggers»</span>. <a href="https://www.r-bloggers.com/2019/08/maximum-likelihood-estimation-from-scratch/" class="uri">https://www.r-bloggers.com/2019/08/maximum-likelihood-estimation-from-scratch/</a>, 2024.</div>
+</div>
+</div></section></div></main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+window.document.addEventListener("DOMContentLoaded", function (event) {
+  const toggleBodyColorMode = (bsSheetEl) => {
+    const mode = bsSheetEl.getAttribute("data-mode");
+    const bodyEl = window.document.querySelector("body");
+    if (mode === "dark") {
+      bodyEl.classList.add("quarto-dark");
+      bodyEl.classList.remove("quarto-light");
+    } else {
+      bodyEl.classList.add("quarto-light");
+      bodyEl.classList.remove("quarto-dark");
+    }
+  }
+  const toggleBodyColorPrimary = () => {
+    const bsSheetEl = window.document.querySelector("link#quarto-bootstrap");
+    if (bsSheetEl) {
+      toggleBodyColorMode(bsSheetEl);
+    }
+  }
+  toggleBodyColorPrimary();  
+  const icon = "";
+  const anchorJS = new window.AnchorJS();
+  anchorJS.options = {
+    placement: 'right',
+    icon: icon
+  };
+  anchorJS.add('.anchored');
+  const isCodeAnnotation = (el) => {
+    for (const clz of el.classList) {
+      if (clz.startsWith('code-annotation-')) {                     
+        return true;
+      }
+    }
+    return false;
+  }
+  const clipboard = new window.ClipboardJS('.code-copy-button', {
+    text: function(trigger) {
+      const codeEl = trigger.previousElementSibling.cloneNode(true);
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+  });
+  clipboard.on('success', function(e) {
+    // button target
+    const button = e.trigger;
+    // don't keep focus
+    button.blur();
+    // flash "checked"
+    button.classList.add('code-copy-button-checked');
+    var currentTitle = button.getAttribute("title");
+    button.setAttribute("title", "Copiada");
+    let tooltip;
+    if (window.bootstrap) {
+      button.setAttribute("data-bs-toggle", "tooltip");
+      button.setAttribute("data-bs-placement", "left");
+      button.setAttribute("data-bs-title", "Copiada");
+      tooltip = new bootstrap.Tooltip(button, 
+        { trigger: "manual", 
+          customClass: "code-copy-button-tooltip",
+          offset: [0, -8]});
+      tooltip.show();    
+    }
+    setTimeout(function() {
+      if (tooltip) {
+        tooltip.hide();
+        button.removeAttribute("data-bs-title");
+        button.removeAttribute("data-bs-toggle");
+        button.removeAttribute("data-bs-placement");
+      }
+      button.setAttribute("title", currentTitle);
+      button.classList.remove('code-copy-button-checked');
+    }, 1000);
+    // clear code selection
+    e.clearSelection();
+  });
+  function tippyHover(el, contentFn) {
+    const config = {
+      allowHTML: true,
+      content: contentFn,
+      maxWidth: 500,
+      delay: 100,
+      arrow: false,
+      appendTo: function(el) {
+          return el.parentElement;
+      },
+      interactive: true,
+      interactiveBorder: 10,
+      theme: 'quarto',
+      placement: 'bottom-start'
+    };
+    window.tippy(el, config); 
+  }
+  const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+  for (var i=0; i<noterefs.length; i++) {
+    const ref = noterefs[i];
+    tippyHover(ref, function() {
+      // use id or data attribute instead here
+      let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+      try { href = new URL(href).hash; } catch {}
+      const id = href.replace(/^#\/?/, "");
+      const note = window.document.getElementById(id);
+      return note.innerHTML;
+    });
+  }
+      let selectedAnnoteEl;
+      const selectorForAnnotation = ( cell, annotation) => {
+        let cellAttr = 'data-code-cell="' + cell + '"';
+        let lineAttr = 'data-code-annotation="' +  annotation + '"';
+        const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+        return selector;
+      }
+      const selectCodeLines = (annoteEl) => {
+        const doc = window.document;
+        const targetCell = annoteEl.getAttribute("data-target-cell");
+        const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+        const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+        const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+        const lineIds = lines.map((line) => {
+          return targetCell + "-" + line;
+        })
+        let top = null;
+        let height = null;
+        let parent = null;
+        if (lineIds.length > 0) {
+            //compute the position of the single el (top and bottom and make a div)
+            const el = window.document.getElementById(lineIds[0]);
+            top = el.offsetTop;
+            height = el.offsetHeight;
+            parent = el.parentElement.parentElement;
+          if (lineIds.length > 1) {
+            const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+            const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+            height = bottom - top;
+          }
+          if (top !== null && height !== null && parent !== null) {
+            // cook up a div (if necessary) and position it 
+            let div = window.document.getElementById("code-annotation-line-highlight");
+            if (div === null) {
+              div = window.document.createElement("div");
+              div.setAttribute("id", "code-annotation-line-highlight");
+              div.style.position = 'absolute';
+              parent.appendChild(div);
+            }
+            div.style.top = top - 2 + "px";
+            div.style.height = height + 4 + "px";
+            let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+            if (gutterDiv === null) {
+              gutterDiv = window.document.createElement("div");
+              gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+              gutterDiv.style.position = 'absolute';
+              const codeCell = window.document.getElementById(targetCell);
+              const gutter = codeCell.querySelector('.code-annotation-gutter');
+              gutter.appendChild(gutterDiv);
+            }
+            gutterDiv.style.top = top - 2 + "px";
+            gutterDiv.style.height = height + 4 + "px";
+          }
+          selectedAnnoteEl = annoteEl;
+        }
+      };
+      const unselectCodeLines = () => {
+        const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+        elementsIds.forEach((elId) => {
+          const div = window.document.getElementById(elId);
+          if (div) {
+            div.remove();
+          }
+        });
+        selectedAnnoteEl = undefined;
+      };
+      // Attach click handler to the DT
+      const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+      for (const annoteDlNode of annoteDls) {
+        annoteDlNode.addEventListener('click', (event) => {
+          const clickedEl = event.target;
+          if (clickedEl !== selectedAnnoteEl) {
+            unselectCodeLines();
+            const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+            if (activeEl) {
+              activeEl.classList.remove('code-annotation-active');
+            }
+            selectCodeLines(clickedEl);
+            clickedEl.classList.add('code-annotation-active');
+          } else {
+            // Unselect the line
+            unselectCodeLines();
+            clickedEl.classList.remove('code-annotation-active');
+          }
+        });
+      }
+  const findCites = (el) => {
+    const parentEl = el.parentElement;
+    if (parentEl) {
+      const cites = parentEl.dataset.cites;
+      if (cites) {
+        return {
+          el,
+          cites: cites.split(' ')
+        };
+      } else {
+        return findCites(el.parentElement)
+      }
+    } else {
+      return undefined;
+    }
+  };
+  var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+  for (var i=0; i<bibliorefs.length; i++) {
+    const ref = bibliorefs[i];
+    const citeInfo = findCites(ref);
+    if (citeInfo) {
+      tippyHover(citeInfo.el, function() {
+        var popup = window.document.createElement('div');
+        citeInfo.cites.forEach(function(cite) {
+          var citeDiv = window.document.createElement('div');
+          citeDiv.classList.add('hanging-indent');
+          citeDiv.classList.add('csl-entry');
+          var biblioDiv = window.document.getElementById('ref-' + cite);
+          if (biblioDiv) {
+            citeDiv.innerHTML = biblioDiv.innerHTML;
+          }
+          popup.appendChild(citeDiv);
+        });
+        return popup.innerHTML;
+      });
+    }
+  }
+});
+</script>
+</div> <!-- /content -->
+
+
+
+</body></html>
