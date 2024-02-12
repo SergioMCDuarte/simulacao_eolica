@@ -1,5 +1,6 @@
 ---
 title: "Simulação probabilística da TIR de um investimento num parque eólico"
+subtitle: 'Computação Estatística I'
 date: 2024-02-12
 author:
   - name: Sérgio Duarte, nº2302287
@@ -8,7 +9,7 @@ author:
       - name: Universidade Aberta
       - department: Estatística I
 format: 
-  pdf:
+  html:
       page-layout: article
 editor: 
   markdown:
@@ -17,8 +18,7 @@ bibliography: bibliografia.bib
 csl: ieee.csl
 link-citations: true
 lang: pt
-header-includes:
-  - \usepackage{amsmath}
+
 ---
 
 ```{=html}
@@ -37,6 +37,8 @@ library(dplyr)
 library(mixtools)
 library(latex2exp)
 library(hrbrthemes)
+library(knitr)
+
 source('src/vento.R')
 source('src/energia.R')
 source('src/turbina.R')
@@ -53,7 +55,7 @@ colnames(turbina) <- c('v','p')
 
 # Resumo
 
-Este tabalho propõe um método probilístico de avaliação de um investimento de um parque eólico, recorrendo a uma simulação de Monte Carlo. Para proceder a simulação foram recolhidos dados de velocidades de vento e de preços de energia, e subsquentemente modeladas as suas distribuições. Como resultado foi obtida uma distribuição da Taxa Interna de Rendibilidade (TIR) do investimento, deste modo incorporando no resultado a variabilidade inerente às variáveis do cálculo.
+Este tabalho propõe um método probilístico de avaliação de um investimento de um parque eólico, recorrendo a uma simulação de Monte Carlo. Para proceder à simulação foram recolhidos dados de velocidades de vento e de preços de energia, e subsquentemente modeladas as suas distribuições. Como resultado foi obtida uma distribuição da Taxa Interna de Rendibilidade (TIR) do investimento, deste modo incorporando no resultado a variabilidade inerente às variáveis do cálculo.
 
 # Enquadramento
 
@@ -194,13 +196,7 @@ Procedimentos preliminares:
 
     -   Custos de instalação
 
-    -   Custos dos equipamentos
-
     -   Custos de O&M
-
-    -   Taxa de atualização -\> como definir?
-
-    -   definir como vai ser pago o investimento
 
 -   Obter dados velocidade de vento
 
@@ -258,10 +254,10 @@ programação Python, devido à existência de uma biblioteca específica
 para trabalhar este formato, suportado pelo próprio ECMWF @cfgrib.
 
 De modo a utilizar os dados, as componentes do vento foram combinadas
-para obter a norma da velocidade do vento:
+para obter a magnitude da velocidade do vento:
 
 $$
-\overline V = |U,V| = \sqrt{U^2 + V^2}
+\overline V = ||U+V||_2 = \sqrt{U^2 + V^2}
 $$
 
 Foi feita a média espacial da grelha, para cada instante da série, e os
@@ -308,11 +304,11 @@ O estimador é dado por:
 f(x|{\beta, \theta}) &= \frac{\beta}{\theta^\beta}x^{\beta-1}e^{-(\frac{x}{\theta})^\beta} \Rightarrow \\
 L(\beta, \theta | X) 
 &= f(x_1|\beta, \theta)f(x_2|\beta, \theta)...f(x_n|\beta, \theta) \\
-&= \prod^n_{i=0} \frac{\beta}{\theta}\left(\frac{x_i}{\theta}\right)^{(\beta-1)} e^{-\left(\frac{x_i}{\theta}\right)^\beta} \\
-&= \left(\frac{\beta}{\theta}\right)^n \prod^n_{i=0}x_i^{(\beta-1)}e^{-\left(\frac{x_i}{\theta}\right)^\beta}\\
+&= \prod^n_{i=0} \frac{\beta}{\theta^{\beta}}x_i^{(\beta-1)} e^{-\left(\frac{x_i}{\theta}\right)^\beta} \\
+&= \left(\frac{\beta}{\theta^{\beta}}\right)^n \prod^n_{i=0}x_i^{(\beta-1)}e^{-\left(\frac{x_i}{\theta}\right)^\beta}\\
 M(\beta, \theta|X) &= \log{\left(L(\beta, theta|X)\right)} ~\\
-&= \log{\left(\left(\frac{\beta}{\theta}\right)^n\prod^n_{i=0}x_i^{(\beta-1)}e^{-\left(\frac{x_i}{\theta}\right)^\beta}\right)} \\
-&= n\left[\log{\beta}-\log{\theta}\right] + \sum^n_{i=0} \left( (\beta-1)\log{x_i} - \left(\frac{x_i}{\theta}\right)^\beta\right)
+&= \log{\left(\left(\frac{\beta}{\theta^{\beta}}\right)^n\prod^n_{i=0}x_i^{(\beta-1)}e^{-\left(\frac{x_i}{\theta}\right)^\beta}\right)} \\
+&= n\left[\log{\beta}-\beta\log{\theta}\right] + \sum^n_{i=0} \left( (\beta-1)\log{x_i} - \left(\frac{x_i}{\theta}\right)^\beta\right)
 \end{align*}
 
 
@@ -321,7 +317,7 @@ M(\beta, \theta|X) &= \log{\left(L(\beta, theta|X)\right)} ~\\
 Os dados de preços da energia eléctrica utilizados foram referentes ao
 ano de 2022. Estes não seguem uma distribuição comum, pelo que a mesmo
 foi aproximada com uma mistura de 3 distruições normais, através da
-bilbioteca **`mixtools`** do R.
+biblioteca **`mixtools`** do R.
 
 A escolha do número 3 para o número de distribuições na mistura deveu-se
 sobretudo aos resultados empíricos dos vários testes realizados. No
@@ -374,7 +370,14 @@ ajusta-se um modelo logístico da forma:
 
 $$
 f(u) = \frac{L}{1+e^{-k(u-u_0)}}
-$$ Onde: $L:$ supremo dos dados observados $k:$ taxa de crescimento
+$$ 
+
+Onde:
+
+$L:$ supremo dos dados observados 
+
+$k:$ taxa de crescimento
+
 $u_0:$ centro da curva
 
 O modelo foi ajustado pela minimização numérica de uma função objectivo
@@ -426,6 +429,8 @@ $u_0$ = `r curva.potencia.params$par[3]`
 
 Na curva apresentada acima, o parâmetro L foi forçado a 2050, pois este é o máximo empírico da curva.
 
+\newpage
+
 ### Distribuição das velocidade de vento
 
 Através do estimador de máxima verosimilhança obtive-se a seguinte curva:
@@ -475,19 +480,24 @@ ks.test(rvs.vento,
         velocidade.vento$velocidade_de_vento)
 ```
 
+\newpage
+
 ### Distribuição do preço da energia
+
+Verifica-se que existe uma grande variância para anos de 2021 e 2022. A média destes anos também é bastante superior aos anos anteriores. É de notar também a média inferior do ano de 2020, provavelmente devida à pandemia. Estes dados sugerem que seria benéfico obter um maior número de dados, de modo a melhorar a representatividade dos mesmos e a evitar que fenómenos locais possam distorcer a distribuição.
+
+
 ```{r, echo=FALSE, warning=FALSE}
 precos.energia <- read.csv('dados/precos_energia.csv')
 
-data.frame(precos.energia %>% 
+kable(data.frame(precos.energia %>% 
   group_by(ano) %>% 
   summarise(
     media.preco = mean(preco),
     var.preco = var(preco)
-  ))
+  )), digits=2)
 
 ```
-Verifica-se que existe uma grande variância para anos de 2021 e 2022. A média destes anos também é bastante superior aos anos anteriores. É de notar também a média inferior do ano de 2020, provavelmente devida à pandemia. Estes dados sugerem que seria benéfico obter um maior número de dados, de modo a melhorar a representatividade dos mesmos e a evitar que fenómenos locais possam distorcer a distribuição.
 
 A mistura gaussiana encontrada que melhor se ajusta aos dados de preço da energia resulta na seguinte curva:
 

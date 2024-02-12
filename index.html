@@ -53,14 +53,13 @@ div.csl-indent {
 <script src="TrabalhoFinal_files/libs/bootstrap/bootstrap.min.js"></script>
 <link href="TrabalhoFinal_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
 <link href="TrabalhoFinal_files/libs/bootstrap/bootstrap.min.css" rel="stylesheet" id="quarto-bootstrap" data-mode="light">
-</head><body class="fullcontent">\usepackage{amsmath}
 
   <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
   <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
 
+</head>
 
-
-
+<body class="fullcontent">
 
 <div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
 
@@ -69,6 +68,7 @@ div.csl-indent {
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
 <h1 class="title">Simulação probabilística da TIR de um investimento num parque eólico</h1>
+<p class="subtitle lead">Computação Estatística I</p>
 </div>
 
 
@@ -112,7 +112,7 @@ text-align: justify}
 <hr>
 <section id="resumo" class="level1">
 <h1>Resumo</h1>
-<p>Este tabalho propõe um método probilístico de avaliação de um investimento de um parque eólico, recorrendo a uma simulação de Monte Carlo. Para proceder a simulação foram recolhidos dados de velocidades de vento e de preços de energia, e subsquentemente modeladas as suas distribuições. Como resultado foi obtida uma distribuição da Taxa Interna de Rendibilidade (TIR) do investimento, deste modo incorporando no resultado a variabilidade inerente às variáveis do cálculo.</p>
+<p>Este tabalho propõe um método probilístico de avaliação de um investimento de um parque eólico, recorrendo a uma simulação de Monte Carlo. Para proceder à simulação foram recolhidos dados de velocidades de vento e de preços de energia, e subsquentemente modeladas as suas distribuições. Como resultado foi obtida uma distribuição da Taxa Interna de Rendibilidade (TIR) do investimento, deste modo incorporando no resultado a variabilidade inerente às variáveis do cálculo.</p>
 </section>
 <section id="enquadramento" class="level1">
 <h1>Enquadramento</h1>
@@ -188,10 +188,7 @@ E_a = \int^{u_{max}}_{u_0}f(u) P(u)du
 <li><p>Obter custos iniciais</p>
 <ul>
 <li><p>Custos de instalação</p></li>
-<li><p>Custos dos equipamentos</p></li>
 <li><p>Custos de O&amp;M</p></li>
-<li><p>Taxa de atualização -&gt; como definir?</p></li>
-<li><p>definir como vai ser pago o investimento</p></li>
 </ul></li>
 <li><p>Obter dados velocidade de vento</p>
 <ul>
@@ -228,9 +225,9 @@ E_a = \int^{u_{max}}_{u_0}f(u) P(u)du
 <section id="velocidade-de-vento" class="level3">
 <h3 class="anchored" data-anchor-id="velocidade-de-vento">Velocidade de vento</h3>
 <p>Os dados de velocidades de vento são provenientes do produto ERA5 referente a reanálises atmosférias, fornecido pelo ECMWF <span class="citation" data-cites="era5"><a href="#ref-era5" role="doc-biblioref">[3]</a></span>. Estes dados consistem numa série temporal das componentes Norte e Oeste das velocidades de vento, numa grelha horizontal, a uma altitude de 100m, em formato GRIB. Os dados GRIB foram processados recorrendo à linguagem de programação Python, devido à existência de uma biblioteca específica para trabalhar este formato, suportado pelo próprio ECMWF <span class="citation" data-cites="cfgrib"><a href="#ref-cfgrib" role="doc-biblioref">[4]</a></span>.</p>
-<p>De modo a utilizar os dados, as componentes do vento foram combinadas para obter a norma da velocidade do vento:</p>
+<p>De modo a utilizar os dados, as componentes do vento foram combinadas para obter a magnitude da velocidade do vento:</p>
 <p><span class="math display">\[
-\overline V = |U,V| = \sqrt{U^2 + V^2}
+\overline V = ||U+V||_2 = \sqrt{U^2 + V^2}
 \]</span></p>
 <p>Foi feita a média espacial da grelha, para cada instante da série, e os dados foram convertidos para formato CSV, para facilitar a sua utilização.</p>
 </section>
@@ -259,17 +256,17 @@ E_a = \int^{u_{max}}_{u_0}f(u) P(u)du
 f(x|{\beta, \theta}) &amp;= \frac{\beta}{\theta^\beta}x^{\beta-1}e^{-(\frac{x}{\theta})^\beta} \Rightarrow \\
 L(\beta, \theta | X)
 &amp;= f(x_1|\beta, \theta)f(x_2|\beta, \theta)...f(x_n|\beta, \theta) \\
-&amp;= \prod^n_{i=0} \frac{\beta}{\theta}\left(\frac{x_i}{\theta}\right)^{(\beta-1)} e^{-\left(\frac{x_i}{\theta}\right)^\beta} \\
-&amp;= \left(\frac{\beta}{\theta}\right)^n \prod^n_{i=0}x_i^{(\beta-1)}e^{-\left(\frac{x_i}{\theta}\right)^\beta}\\
+&amp;= \prod^n_{i=0} \frac{\beta}{\theta^{\beta}}x_i^{(\beta-1)} e^{-\left(\frac{x_i}{\theta}\right)^\beta} \\
+&amp;= \left(\frac{\beta}{\theta^{\beta}}\right)^n \prod^n_{i=0}x_i^{(\beta-1)}e^{-\left(\frac{x_i}{\theta}\right)^\beta}\\
 M(\beta, \theta|X) &amp;= \log{\left(L(\beta, theta|X)\right)} ~\\
-&amp;= \log{\left(\left(\frac{\beta}{\theta}\right)^n\prod^n_{i=0}x_i^{(\beta-1)}e^{-\left(\frac{x_i}{\theta}\right)^\beta}\right)} \\
-&amp;= n\left[\log{\beta}-\log{\theta}\right] + \sum^n_{i=0} \left( (\beta-1)\log{x_i} - \left(\frac{x_i}{\theta}\right)^\beta\right)
+&amp;= \log{\left(\left(\frac{\beta}{\theta^{\beta}}\right)^n\prod^n_{i=0}x_i^{(\beta-1)}e^{-\left(\frac{x_i}{\theta}\right)^\beta}\right)} \\
+&amp;= n\left[\log{\beta}-\beta\log{\theta}\right] + \sum^n_{i=0} \left( (\beta-1)\log{x_i} - \left(\frac{x_i}{\theta}\right)^\beta\right)
 \end{align*}\]</span></p>
 </section>
 </section>
 <section id="distribuição-de-preços" class="level3">
 <h3 class="anchored" data-anchor-id="distribuição-de-preços">Distribuição de preços</h3>
-<p>Os dados de preços da energia eléctrica utilizados foram referentes ao ano de 2022. Estes não seguem uma distribuição comum, pelo que a mesmo foi aproximada com uma mistura de 3 distruições normais, através da bilbioteca <strong><code>mixtools</code></strong> do R.</p>
+<p>Os dados de preços da energia eléctrica utilizados foram referentes ao ano de 2022. Estes não seguem uma distribuição comum, pelo que a mesmo foi aproximada com uma mistura de 3 distruições normais, através da biblioteca <strong><code>mixtools</code></strong> do R.</p>
 <p>A escolha do número 3 para o número de distribuições na mistura deveu-se sobretudo aos resultados empíricos dos vários testes realizados. No entanto este valor não é descabido pois podemos racionalizá-lo da seguinte forma: existem períodos em que a produção de energia é elevada, o que faz baixar o preço; períodos em que é reduzida, o que faz aumentar o preço; e períodos em que tende para a principal moda da distribuição, que faz com o preço se aproxime da média, gerando assim 3 processos de geração de preços.</p>
 </section>
 <section id="cálculo-da-tir" class="level3">
@@ -303,7 +300,11 @@ Custos\ O\&amp;M\ anuais: C_{OMj} &amp;= 2\% \times I_t = 259400\texteuro
 <p>Utilizando os dados da curva de potência da turbina Enercon E70/2000, ajusta-se um modelo logístico da forma:</p>
 <p><span class="math display">\[
 f(u) = \frac{L}{1+e^{-k(u-u_0)}}
-\]</span> Onde: <span class="math inline">\(L:\)</span> supremo dos dados observados <span class="math inline">\(k:\)</span> taxa de crescimento <span class="math inline">\(u_0:\)</span> centro da curva</p>
+\]</span></p>
+<p>Onde:</p>
+<p><span class="math inline">\(L:\)</span> supremo dos dados observados</p>
+<p><span class="math inline">\(k:\)</span> taxa de crescimento</p>
+<p><span class="math inline">\(u_0:\)</span> centro da curva</p>
 <p>O modelo foi ajustado pela minimização numérica de uma função objectivo da forma:</p>
 <p><span class="math display">\[
 g(L,k,u_0) = (y-\frac{L}{1+e^{-k(u-u_0)}})^2
@@ -322,6 +323,7 @@ g(L,k,u_0) = (y-\frac{L}{1+e^{-k(u-u_0)}})^2
 <p>k = 0.6756282</p>
 <p><span class="math inline">\(u_0\)</span> = 9.272849</p>
 <p>Na curva apresentada acima, o parâmetro L foi forçado a 2050, pois este é o máximo empírico da curva.</p>
+<div style="page-break-after: always;"></div>
 </section>
 <section id="distribuição-das-velocidade-de-vento" class="level3">
 <h3 class="anchored" data-anchor-id="distribuição-das-velocidade-de-vento">Distribuição das velocidade de vento</h3>
@@ -345,20 +347,51 @@ D = 0.0097412, p-value = 0.1651
 alternative hypothesis: two-sided</code></pre>
 </div>
 </div>
+<div style="page-break-after: always;"></div>
 </section>
 <section id="distribuição-do-preço-da-energia" class="level3">
 <h3 class="anchored" data-anchor-id="distribuição-do-preço-da-energia">Distribuição do preço da energia</h3>
-<div class="cell">
-<div class="cell-output cell-output-stdout">
-<pre><code>   ano media.preco var.preco
-1 2018    57.45023  151.4779
-2 2019    47.86878  116.9475
-3 2020    33.98519  126.8547
-4 2021   112.00969 5580.9095
-5 2022   167.89105 4775.3367</code></pre>
-</div>
-</div>
 <p>Verifica-se que existe uma grande variância para anos de 2021 e 2022. A média destes anos também é bastante superior aos anos anteriores. É de notar também a média inferior do ano de 2020, provavelmente devida à pandemia. Estes dados sugerem que seria benéfico obter um maior número de dados, de modo a melhorar a representatividade dos mesmos e a evitar que fenómenos locais possam distorcer a distribuição.</p>
+<div class="cell">
+<div class="cell-output-display">
+<table class="table table-sm table-striped small">
+<thead>
+<tr class="header">
+<th style="text-align: right;">ano</th>
+<th style="text-align: right;">media.preco</th>
+<th style="text-align: right;">var.preco</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: right;">2018</td>
+<td style="text-align: right;">57.45</td>
+<td style="text-align: right;">151.48</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">2019</td>
+<td style="text-align: right;">47.87</td>
+<td style="text-align: right;">116.95</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">2020</td>
+<td style="text-align: right;">33.99</td>
+<td style="text-align: right;">126.85</td>
+</tr>
+<tr class="even">
+<td style="text-align: right;">2021</td>
+<td style="text-align: right;">112.01</td>
+<td style="text-align: right;">5580.91</td>
+</tr>
+<tr class="odd">
+<td style="text-align: right;">2022</td>
+<td style="text-align: right;">167.89</td>
+<td style="text-align: right;">4775.34</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
 <p>A mistura gaussiana encontrada que melhor se ajusta aos dados de preço da energia resulta na seguinte curva:</p>
 <div class="cell" data-layout-align="center">
 <div class="cell-output-display">
